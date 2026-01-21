@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
+// Initialize logging first - this sets up file transport and console overrides
+import './utils/logger.js';
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { 
-  CallToolRequestSchema, 
+import {
+  CallToolRequestSchema,
   ListToolsRequestSchema,
   InitializeRequestSchema,
   ListResourcesRequestSchema,
-  ListPromptsRequestSchema 
+  ListPromptsRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
 
 // Desktop-specific: Check for local credentials
@@ -20,8 +23,8 @@ if (!TRELLO_API_KEY || !TRELLO_TOKEN) {
 }
 
 // Import tools with credential injection
-import { 
-  listBoardsTool, 
+import {
+  listBoardsTool,
   getBoardDetailsTool,
   getListsTool,
   handleListBoards,
@@ -29,8 +32,8 @@ import {
   handleGetLists
 } from './tools/boards.js';
 
-import { 
-  createCardTool, 
+import {
+  createCardTool,
   updateCardTool,
   moveCardTool,
   getCardTool,
@@ -142,105 +145,105 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // Handle tool calls with automatic credential injection
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-  
+
   // Inject credentials into arguments
   const argsWithCredentials = {
     ...args,
     apiKey: TRELLO_API_KEY,
     token: TRELLO_TOKEN
   };
-  
+
   try {
     let result;
-    
+
     switch (name) {
       // Phase 1: Essential tools
       case 'trello_search':
         result = await handleTrelloSearch(argsWithCredentials);
         break;
-      
+
       case 'trello_get_user_boards':
         result = await handleTrelloGetUserBoards(argsWithCredentials);
         break;
-      
+
       case 'get_board_details':
         result = await handleGetBoardDetails(argsWithCredentials);
         break;
-      
+
       case 'get_card':
         result = await handleGetCard(argsWithCredentials);
         break;
-      
+
       case 'create_card':
         result = await handleCreateCard(argsWithCredentials);
         break;
-      
+
       // Phase 2: Core operations
       case 'update_card':
         result = await handleUpdateCard(argsWithCredentials);
         break;
-      
+
       case 'move_card':
         result = await handleMoveCard(argsWithCredentials);
         break;
-      
+
       case 'trello_add_comment':
         result = await handleTrelloAddComment(argsWithCredentials);
         break;
-      
+
       case 'trello_get_list_cards':
         result = await handleTrelloGetListCards(argsWithCredentials);
         break;
-      
+
       case 'trello_create_list':
         result = await handleTrelloCreateList(argsWithCredentials);
         break;
-      
+
       // Original tools (maintained for compatibility)
       case 'list_boards':
         result = await handleListBoards(argsWithCredentials);
         break;
-      
+
       case 'get_lists':
         result = await handleGetLists(argsWithCredentials);
         break;
-      
+
       // Member management
       case 'trello_get_member':
         result = await handleTrelloGetMember(argsWithCredentials);
         break;
-      
+
       // Phase 3: Advanced features
       case 'trello_get_board_cards':
         result = await handleTrelloGetBoardCards(argsWithCredentials);
         break;
-      
+
       case 'trello_get_card_actions':
         result = await handleTrelloGetCardActions(argsWithCredentials);
         break;
-      
+
       case 'trello_get_card_attachments':
         result = await handleTrelloGetCardAttachments(argsWithCredentials);
         break;
-      
+
       case 'trello_get_card_checklists':
         result = await handleTrelloGetCardChecklists(argsWithCredentials);
         break;
-      
+
       case 'trello_get_board_members':
         result = await handleTrelloGetBoardMembers(argsWithCredentials);
         break;
-      
+
       case 'trello_get_board_labels':
         result = await handleTrelloGetBoardLabels(argsWithCredentials);
         break;
-        
+
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
-    
+
     return result;
-    
+
   } catch (error) {
     throw error;
   }
@@ -269,7 +272,7 @@ process.on('unhandledRejection', (_reason) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  
+
   // Server is running - no output needed
 }
 

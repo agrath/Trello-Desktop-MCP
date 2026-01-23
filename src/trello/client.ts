@@ -569,18 +569,59 @@ export class TrelloClient {
     fields?: string[];
   }): Promise<TrelloApiResponse<any[]>> {
     const params: Record<string, string> = {};
-    
+
     if (options?.checkItems) {
       params.checkItems = options.checkItems;
     }
     if (options?.fields) {
       params.fields = options.fields.join(',');
     }
-    
+
     return this.makeRequest<any[]>(
       `/cards/${cardId}/checklists`,
       { params },
       `Get checklists for card ${cardId}`
+    );
+  }
+
+  async createLabel(boardId: string, name: string, color: string): Promise<TrelloApiResponse<any>> {
+    return this.makeRequest<any>(
+      `/boards/${boardId}/labels`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ name, color })
+      },
+      `Create label "${name}" on board ${boardId}`
+    );
+  }
+
+  async updateLabel(labelId: string, updates: { name?: string; color?: string }): Promise<TrelloApiResponse<any>> {
+    return this.makeRequest<any>(
+      `/labels/${labelId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      },
+      `Update label ${labelId}`
+    );
+  }
+
+  async addLabelToCard(cardId: string, labelId: string): Promise<TrelloApiResponse<string[]>> {
+    return this.makeRequest<string[]>(
+      `/cards/${cardId}/idLabels`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ value: labelId })
+      },
+      `Add label ${labelId} to card ${cardId}`
+    );
+  }
+
+  async removeLabelFromCard(cardId: string, labelId: string): Promise<TrelloApiResponse<void>> {
+    return this.makeRequest<void>(
+      `/cards/${cardId}/idLabels/${labelId}`,
+      { method: 'DELETE' },
+      `Remove label ${labelId} from card ${cardId}`
     );
   }
 }

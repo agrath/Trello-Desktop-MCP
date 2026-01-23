@@ -11,8 +11,12 @@ enum LogLevel {
 
 class Logger {
   private level: LogLevel;
+  private enabled: boolean;
 
   constructor() {
+    // Check if logging is enabled via TRELLO_MCP_LOGGING environment variable
+    this.enabled = process.env.TRELLO_MCP_LOGGING === 'true';
+
     const envLevel = process.env.LOG_LEVEL?.toUpperCase();
     switch (envLevel) {
       case 'DEBUG':
@@ -33,17 +37,11 @@ class Logger {
   }
 
   private log(level: LogLevel, message: string, context?: LogContext) {
-    if (level < this.level) return;
-
-    // Desktop version: Disable all logging to stdout
-    // Only log to stderr if explicitly enabled
-    if (process.env.MCP_DESKTOP_MODE === 'true') {
-      return; // No logging in desktop mode
-    }
+    if (!this.enabled || level < this.level) return;
 
     const timestamp = new Date().toISOString();
     const levelName = LogLevel[level];
-    
+
     const logEntry = {
       timestamp,
       level: levelName,

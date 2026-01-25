@@ -12,11 +12,20 @@ const validateSearch = (args: unknown) => {
     boardIds: z.array(z.string().regex(/^[a-f0-9]{24}$/, 'Invalid board ID format')).optional(),
     boardsLimit: z.number().min(1).max(1000).optional(),
     cardsLimit: z.number().min(1).max(1000).optional(),
-    membersLimit: z.number().min(1).max(1000).optional()
+    membersLimit: z.number().min(1).max(1000).optional(),
+    descriptionMaxLength: z.number().min(0).max(10000).optional(),
+    compact: z.boolean().optional()
   });
-  
+
   return schema.parse(args);
 };
+
+function truncateText(text: string | undefined | null, maxLength: number): string {
+  if (!text) return '';
+  if (maxLength === 0) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
 
 export const trelloSearchTool: Tool = {
   name: 'trello_search',
@@ -74,6 +83,18 @@ export const trelloSearchTool: Tool = {
         maximum: 1000,
         description: 'Maximum number of members to return in results',
         default: 20
+      },
+      descriptionMaxLength: {
+        type: 'number',
+        minimum: 0,
+        maximum: 10000,
+        description: 'Maximum length for descriptions (0 to exclude descriptions). Default: 200',
+        default: 200
+      },
+      compact: {
+        type: 'boolean',
+        description: 'Return minimal fields only (id, name, url). Default: false',
+        default: false
       }
     },
     required: ['apiKey', 'token', 'query']
@@ -82,9 +103,12 @@ export const trelloSearchTool: Tool = {
 
 export async function handleTrelloSearch(args: unknown) {
   try {
-    const { apiKey, token, query, modelTypes, boardIds, boardsLimit, cardsLimit, membersLimit } = validateSearch(args);
+    const { apiKey, token, query, modelTypes, boardIds, boardsLimit, cardsLimit, membersLimit, descriptionMaxLength, compact } = validateSearch(args);
     const client = new TrelloClient({ apiKey, token });
-    
+
+    // Default to 200 chars for descriptions to keep responses manageable
+    const maxDescLen = descriptionMaxLength ?? 200;
+
     const searchOptions = {
       ...(modelTypes && { modelTypes }),
       ...(boardIds && { boardIds }),
@@ -92,17 +116,50 @@ export async function handleTrelloSearch(args: unknown) {
       ...(cardsLimit !== undefined && { cardsLimit }),
       ...(membersLimit !== undefined && { membersLimit })
     };
-    
+
     const response = await client.search(query, Object.keys(searchOptions).length > 0 ? searchOptions : undefined);
     const searchResults = response.data;
-    
-    const result = {
+
+    // Build result based on compact mode
+    const result = compact ? {
+      summary: `Search results for: "${query}" (compact mode)`,
+      query,
+      boards: searchResults.boards?.map((board: any) => ({
+        id: board.id,
+        name: board.name,
+        url: board.shortUrl
+      })) || [],
+      cards: searchResults.cards?.map((card: any) => ({
+        id: card.id,
+        name: card.name,
+        url: card.shortUrl,
+        listId: card.idList,
+        boardId: card.idBoard
+      })) || [],
+      members: searchResults.members?.map((member: any) => ({
+        id: member.id,
+        fullName: member.fullName,
+        username: member.username
+      })) || [],
+      organizations: searchResults.organizations?.map((org: any) => ({
+        id: org.id,
+        name: org.name,
+        displayName: org.displayName
+      })) || [],
+      totalResults: {
+        boards: searchResults.boards?.length || 0,
+        cards: searchResults.cards?.length || 0,
+        members: searchResults.members?.length || 0,
+        organizations: searchResults.organizations?.length || 0
+      },
+      rateLimit: response.rateLimit
+    } : {
       summary: `Search results for: "${query}"`,
       query,
       boards: searchResults.boards?.map((board: any) => ({
         id: board.id,
         name: board.name,
-        description: board.desc || 'No description',
+        description: truncateText(board.desc, maxDescLen) || 'No description',
         url: board.shortUrl,
         closed: board.closed,
         lastActivity: board.dateLastActivity
@@ -110,7 +167,7 @@ export async function handleTrelloSearch(args: unknown) {
       cards: searchResults.cards?.map((card: any) => ({
         id: card.id,
         name: card.name,
-        description: card.desc || 'No description',
+        description: truncateText(card.desc, maxDescLen) || 'No description',
         url: card.shortUrl,
         listId: card.idList,
         boardId: card.idBoard,
@@ -126,14 +183,14 @@ export async function handleTrelloSearch(args: unknown) {
         id: member.id,
         fullName: member.fullName,
         username: member.username,
-        bio: member.bio,
+        bio: truncateText(member.bio, maxDescLen),
         url: member.url
       })) || [],
       organizations: searchResults.organizations?.map((org: any) => ({
         id: org.id,
         name: org.name,
         displayName: org.displayName,
-        description: org.desc,
+        description: truncateText(org.desc, maxDescLen),
         url: org.url
       })) || [],
       totalResults: {

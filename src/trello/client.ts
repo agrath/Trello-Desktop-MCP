@@ -508,9 +508,12 @@ export class TrelloClient {
     attachments?: string;
     members?: string;
     filter?: string;
+    limit?: number;
+    before?: string;
+    since?: string;
   }): Promise<TrelloApiResponse<TrelloCard[]>> {
     const params: Record<string, string> = {};
-    
+
     if (options?.attachments) {
       params.attachments = options.attachments;
     }
@@ -520,7 +523,16 @@ export class TrelloClient {
     if (options?.filter) {
       params.filter = options.filter;
     }
-    
+    if (options?.limit) {
+      params.limit = options.limit.toString();
+    }
+    if (options?.before) {
+      params.before = options.before;
+    }
+    if (options?.since) {
+      params.since = options.since;
+    }
+
     return this.makeRequest<TrelloCard[]>(
       `/boards/${boardId}/cards`,
       { params },

@@ -3,6 +3,13 @@ import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
 import { formatValidationError } from '../utils/validation.js';
 
+function truncateText(text: string | undefined | null, maxLength: number): string {
+  if (!text) return '';
+  if (maxLength === 0) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
+
 const validateGetBoardCards = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
@@ -10,7 +17,10 @@ const validateGetBoardCards = (args: unknown) => {
     boardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid board ID format'),
     attachments: z.string().optional(),
     members: z.string().optional(),
-    filter: z.string().optional()
+    filter: z.string().optional(),
+    limit: z.number().min(1).max(1000).optional(),
+    descriptionMaxLength: z.number().min(0).max(10000).optional(),
+    compact: z.boolean().optional()
   });
 
   return schema.parse(args);
@@ -156,6 +166,25 @@ export const trelloGetBoardCardsTool: Tool = {
         enum: ['all', 'open', 'closed'],
         description: 'Filter cards by status',
         default: 'open'
+      },
+      limit: {
+        type: 'number',
+        minimum: 1,
+        maximum: 1000,
+        description: 'Maximum number of cards to return. Default: 50',
+        default: 50
+      },
+      descriptionMaxLength: {
+        type: 'number',
+        minimum: 0,
+        maximum: 10000,
+        description: 'Maximum length for descriptions (0 to exclude descriptions). Default: 200',
+        default: 200
+      },
+      compact: {
+        type: 'boolean',
+        description: 'Return minimal fields only (id, name, url, listId). Default: false',
+        default: false
       }
     },
     required: ['apiKey', 'token', 'boardId']
@@ -164,23 +193,49 @@ export const trelloGetBoardCardsTool: Tool = {
 
 export async function handleTrelloGetBoardCards(args: unknown) {
   try {
-    const { apiKey, token, boardId, attachments, members, filter } = validateGetBoardCards(args);
+    const { apiKey, token, boardId, attachments, members, filter, limit, descriptionMaxLength, compact } = validateGetBoardCards(args);
     const client = new TrelloClient({ apiKey, token });
+
+    // Default to 200 chars for descriptions and 50 cards limit
+    const maxDescLen = descriptionMaxLength ?? 200;
+    const cardLimit = limit ?? 50;
 
     const response = await client.getBoardCards(boardId, {
       ...(attachments && { attachments }),
       ...(members && { members }),
-      ...(filter && { filter })
+      ...(filter && { filter }),
+      limit: cardLimit
     });
-    const cards = response.data;
+    let cards = response.data;
 
-    const result = {
-      summary: `Found ${cards.length} card(s) in board`,
+    // Apply limit if returned more than requested (API may return more)
+    if (cards.length > cardLimit) {
+      cards = cards.slice(0, cardLimit);
+    }
+
+    const totalReturned = cards.length;
+    const hasMore = response.data.length > cardLimit;
+
+    // Build result based on compact mode
+    const result = compact ? {
+      summary: `Found ${totalReturned} card(s) in board${hasMore ? ' (more available)' : ''}`,
       boardId,
+      hasMore,
       cards: cards.map(card => ({
         id: card.id,
         name: card.name,
-        description: card.desc || 'No description',
+        url: card.shortUrl,
+        listId: card.idList
+      })),
+      rateLimit: response.rateLimit
+    } : {
+      summary: `Found ${totalReturned} card(s) in board${hasMore ? ' (more available, use limit parameter)' : ''}`,
+      boardId,
+      hasMore,
+      cards: cards.map(card => ({
+        id: card.id,
+        name: card.name,
+        description: truncateText(card.desc, maxDescLen) || 'No description',
         url: card.shortUrl,
         listId: card.idList,
         position: card.pos,

@@ -183,8 +183,8 @@ export const trelloGetBoardCardsTool: Tool = {
       },
       compact: {
         type: 'boolean',
-        description: 'Return minimal fields only (id, name, url, listId). Default: false',
-        default: false
+        description: 'Return minimal fields only (id, name, url, listId). Default: true. Set to false for full details.',
+        default: true
       }
     },
     required: ['apiKey', 'token', 'boardId']
@@ -199,6 +199,8 @@ export async function handleTrelloGetBoardCards(args: unknown) {
     // Default to 200 chars for descriptions and 50 cards limit
     const maxDescLen = descriptionMaxLength ?? 200;
     const cardLimit = limit ?? 50;
+    // Default to compact mode for smaller responses
+    const useCompact = compact ?? true;
 
     const response = await client.getBoardCards(boardId, {
       ...(attachments && { attachments }),
@@ -216,8 +218,8 @@ export async function handleTrelloGetBoardCards(args: unknown) {
     const totalReturned = cards.length;
     const hasMore = response.data.length > cardLimit;
 
-    // Build result based on compact mode
-    const result = compact ? {
+    // Build result based on compact mode (default: true)
+    const result = useCompact ? {
       summary: `Found ${totalReturned} card(s) in board${hasMore ? ' (more available)' : ''}`,
       boardId,
       hasMore,

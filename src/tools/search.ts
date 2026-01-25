@@ -93,8 +93,8 @@ export const trelloSearchTool: Tool = {
       },
       compact: {
         type: 'boolean',
-        description: 'Return minimal fields only (id, name, url). Default: false',
-        default: false
+        description: 'Return minimal fields only (id, name, url). Default: true. Set to false for full details.',
+        default: true
       }
     },
     required: ['apiKey', 'token', 'query']
@@ -108,6 +108,8 @@ export async function handleTrelloSearch(args: unknown) {
 
     // Default to 200 chars for descriptions to keep responses manageable
     const maxDescLen = descriptionMaxLength ?? 200;
+    // Default to compact mode for smaller responses
+    const useCompact = compact ?? true;
 
     const searchOptions = {
       ...(modelTypes && { modelTypes }),
@@ -120,8 +122,8 @@ export async function handleTrelloSearch(args: unknown) {
     const response = await client.search(query, Object.keys(searchOptions).length > 0 ? searchOptions : undefined);
     const searchResults = response.data;
 
-    // Build result based on compact mode
-    const result = compact ? {
+    // Build result based on compact mode (default: true)
+    const result = useCompact ? {
       summary: `Search results for: "${query}" (compact mode)`,
       query,
       boards: searchResults.boards?.map((board: any) => ({

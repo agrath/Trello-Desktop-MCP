@@ -76,7 +76,15 @@ import {
   trelloGetBoardMembersTool,
   handleTrelloGetBoardMembers,
   trelloGetBoardLabelsTool,
-  handleTrelloGetBoardLabels
+  handleTrelloGetBoardLabels,
+  trelloCreateLabelTool,
+  handleTrelloCreateLabel,
+  trelloUpdateLabelTool,
+  handleTrelloUpdateLabel,
+  trelloAddLabelToCardTool,
+  handleTrelloAddLabelToCard,
+  trelloRemoveLabelFromCardTool,
+  handleTrelloRemoveLabelFromCard
 } from './tools/advanced.js';
 
 // Create server instance
@@ -137,7 +145,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       trelloGetCardAttachmentsTool,
       trelloGetCardChecklistsTool,
       trelloGetBoardMembersTool,
-      trelloGetBoardLabelsTool
+      trelloGetBoardLabelsTool,
+      // Label management
+      trelloCreateLabelTool,
+      trelloUpdateLabelTool,
+      trelloAddLabelToCardTool,
+      trelloRemoveLabelFromCardTool
     ]
   };
 });
@@ -236,6 +249,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'trello_get_board_labels':
         result = await handleTrelloGetBoardLabels(argsWithCredentials);
+        break;
+
+      // Label management
+      case 'trello_create_label':
+        result = await handleTrelloCreateLabel(argsWithCredentials);
+        break;
+
+      case 'trello_update_label':
+        result = await handleTrelloUpdateLabel(argsWithCredentials);
+        break;
+
+      case 'trello_add_label_to_card':
+        result = await handleTrelloAddLabelToCard(argsWithCredentials);
+        break;
+
+      case 'trello_remove_label_from_card':
+        result = await handleTrelloRemoveLabelFromCard(argsWithCredentials);
         break;
 
       default:

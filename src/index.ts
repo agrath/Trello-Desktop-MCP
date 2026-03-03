@@ -87,6 +87,35 @@ import {
   handleTrelloRemoveLabelFromCard
 } from './tools/advanced.js';
 
+import {
+  trelloCreateChecklistTool,
+  handleTrelloCreateChecklist,
+  trelloGetChecklistTool,
+  handleTrelloGetChecklist,
+  trelloUpdateChecklistTool,
+  handleTrelloUpdateChecklist,
+  trelloDeleteChecklistTool,
+  handleTrelloDeleteChecklist,
+  trelloGetChecklistFieldTool,
+  handleTrelloGetChecklistField,
+  trelloUpdateChecklistFieldTool,
+  handleTrelloUpdateChecklistField,
+  trelloGetBoardForChecklistTool,
+  handleTrelloGetBoardForChecklist,
+  trelloGetCardForChecklistTool,
+  handleTrelloGetCardForChecklist,
+  trelloGetCheckItemsTool,
+  handleTrelloGetCheckItems,
+  trelloCreateCheckItemTool,
+  handleTrelloCreateCheckItem,
+  trelloGetCheckItemTool,
+  handleTrelloGetCheckItem,
+  trelloDeleteCheckItemTool,
+  handleTrelloDeleteCheckItem,
+  trelloUpdateCheckItemTool,
+  handleTrelloUpdateCheckItem
+} from './tools/checklists.js';
+
 // Create server instance
 const server = new Server(
   {
@@ -150,7 +179,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       trelloCreateLabelTool,
       trelloUpdateLabelTool,
       trelloAddLabelToCardTool,
-      trelloRemoveLabelFromCardTool
+      trelloRemoveLabelFromCardTool,
+      // Checklist management
+      trelloCreateChecklistTool,
+      trelloGetChecklistTool,
+      trelloUpdateChecklistTool,
+      trelloDeleteChecklistTool,
+      trelloGetChecklistFieldTool,
+      trelloUpdateChecklistFieldTool,
+      trelloGetBoardForChecklistTool,
+      trelloGetCardForChecklistTool,
+      trelloGetCheckItemsTool,
+      trelloCreateCheckItemTool,
+      trelloGetCheckItemTool,
+      trelloDeleteCheckItemTool,
+      trelloUpdateCheckItemTool
     ]
   };
 });
@@ -266,6 +309,59 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'trello_remove_label_from_card':
         result = await handleTrelloRemoveLabelFromCard(argsWithCredentials);
+        break;
+
+      // Checklist management
+      case 'trello_create_checklist':
+        result = await handleTrelloCreateChecklist(argsWithCredentials);
+        break;
+
+      case 'trello_get_checklist':
+        result = await handleTrelloGetChecklist(argsWithCredentials);
+        break;
+
+      case 'trello_update_checklist':
+        result = await handleTrelloUpdateChecklist(argsWithCredentials);
+        break;
+
+      case 'trello_delete_checklist':
+        result = await handleTrelloDeleteChecklist(argsWithCredentials);
+        break;
+
+      case 'trello_get_checklist_field':
+        result = await handleTrelloGetChecklistField(argsWithCredentials);
+        break;
+
+      case 'trello_update_checklist_field':
+        result = await handleTrelloUpdateChecklistField(argsWithCredentials);
+        break;
+
+      case 'trello_get_board_for_checklist':
+        result = await handleTrelloGetBoardForChecklist(argsWithCredentials);
+        break;
+
+      case 'trello_get_card_for_checklist':
+        result = await handleTrelloGetCardForChecklist(argsWithCredentials);
+        break;
+
+      case 'trello_get_check_items':
+        result = await handleTrelloGetCheckItems(argsWithCredentials);
+        break;
+
+      case 'trello_create_check_item':
+        result = await handleTrelloCreateCheckItem(argsWithCredentials);
+        break;
+
+      case 'trello_get_check_item':
+        result = await handleTrelloGetCheckItem(argsWithCredentials);
+        break;
+
+      case 'trello_delete_check_item':
+        result = await handleTrelloDeleteCheckItem(argsWithCredentials);
+        break;
+
+      case 'trello_update_check_item':
+        result = await handleTrelloUpdateCheckItem(argsWithCredentials);
         break;
 
       default:

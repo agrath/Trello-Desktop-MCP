@@ -1,13 +1,19 @@
 import { logger } from '../utils/logger.js';
 import { insights } from '../utils/appInsights.js';
-import type { 
-  TrelloCredentials, 
-  TrelloBoard, 
-  TrelloList, 
-  TrelloCard, 
+import type {
+  TrelloCredentials,
+  TrelloBoard,
+  TrelloList,
+  TrelloCard,
+  TrelloChecklist,
+  TrelloCheckItem,
   CreateCardRequest,
   UpdateCardRequest,
   MoveCardRequest,
+  CreateChecklistRequest,
+  UpdateChecklistRequest,
+  CreateCheckItemRequest,
+  UpdateCheckItemRequest,
   TrelloError,
   RateLimitInfo,
   TrelloApiResponse
@@ -634,6 +640,138 @@ export class TrelloClient {
       `/cards/${cardId}/idLabels/${labelId}`,
       { method: 'DELETE' },
       `Remove label ${labelId} from card ${cardId}`
+    );
+  }
+
+  // Checklist methods
+
+  async createChecklist(data: CreateChecklistRequest): Promise<TrelloApiResponse<TrelloChecklist>> {
+    return this.makeRequest<TrelloChecklist>(
+      '/checklists',
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      },
+      `Create checklist "${data.name}" on card ${data.idCard}`
+    );
+  }
+
+  async getChecklist(checklistId: string, options?: { fields?: string[] }): Promise<TrelloApiResponse<TrelloChecklist>> {
+    const params: Record<string, string> = {};
+    if (options?.fields) {
+      params.fields = options.fields.join(',');
+    }
+    return this.makeRequest<TrelloChecklist>(
+      `/checklists/${checklistId}`,
+      { params },
+      `Get checklist ${checklistId}`
+    );
+  }
+
+  async updateChecklist(checklistId: string, updates: UpdateChecklistRequest): Promise<TrelloApiResponse<TrelloChecklist>> {
+    return this.makeRequest<TrelloChecklist>(
+      `/checklists/${checklistId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      },
+      `Update checklist ${checklistId}`
+    );
+  }
+
+  async deleteChecklist(checklistId: string): Promise<TrelloApiResponse<void>> {
+    return this.makeRequest<void>(
+      `/checklists/${checklistId}`,
+      { method: 'DELETE' },
+      `Delete checklist ${checklistId}`
+    );
+  }
+
+  async getChecklistField(checklistId: string, field: string): Promise<TrelloApiResponse<any>> {
+    return this.makeRequest<any>(
+      `/checklists/${checklistId}/${field}`,
+      {},
+      `Get checklist ${checklistId} field ${field}`
+    );
+  }
+
+  async updateChecklistField(checklistId: string, field: string, value: string): Promise<TrelloApiResponse<any>> {
+    return this.makeRequest<any>(
+      `/checklists/${checklistId}/${field}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ value })
+      },
+      `Update checklist ${checklistId} field ${field}`
+    );
+  }
+
+  async getBoardForChecklist(checklistId: string): Promise<TrelloApiResponse<TrelloBoard>> {
+    return this.makeRequest<TrelloBoard>(
+      `/checklists/${checklistId}/board`,
+      {},
+      `Get board for checklist ${checklistId}`
+    );
+  }
+
+  async getCardForChecklist(checklistId: string): Promise<TrelloApiResponse<TrelloCard[]>> {
+    return this.makeRequest<TrelloCard[]>(
+      `/checklists/${checklistId}/cards`,
+      {},
+      `Get card for checklist ${checklistId}`
+    );
+  }
+
+  async getCheckItems(checklistId: string, options?: { filter?: string; fields?: string[] }): Promise<TrelloApiResponse<TrelloCheckItem[]>> {
+    const params: Record<string, string> = {};
+    if (options?.filter) {
+      params.filter = options.filter;
+    }
+    if (options?.fields) {
+      params.fields = options.fields.join(',');
+    }
+    return this.makeRequest<TrelloCheckItem[]>(
+      `/checklists/${checklistId}/checkItems`,
+      { params },
+      `Get check items for checklist ${checklistId}`
+    );
+  }
+
+  async createCheckItem(checklistId: string, data: CreateCheckItemRequest): Promise<TrelloApiResponse<TrelloCheckItem>> {
+    return this.makeRequest<TrelloCheckItem>(
+      `/checklists/${checklistId}/checkItems`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data)
+      },
+      `Create check item "${data.name}" on checklist ${checklistId}`
+    );
+  }
+
+  async getCheckItem(checklistId: string, checkItemId: string): Promise<TrelloApiResponse<TrelloCheckItem>> {
+    return this.makeRequest<TrelloCheckItem>(
+      `/checklists/${checklistId}/checkItems/${checkItemId}`,
+      {},
+      `Get check item ${checkItemId}`
+    );
+  }
+
+  async deleteCheckItem(checklistId: string, checkItemId: string): Promise<TrelloApiResponse<void>> {
+    return this.makeRequest<void>(
+      `/checklists/${checklistId}/checkItems/${checkItemId}`,
+      { method: 'DELETE' },
+      `Delete check item ${checkItemId}`
+    );
+  }
+
+  async updateCheckItem(cardId: string, checkItemId: string, updates: UpdateCheckItemRequest): Promise<TrelloApiResponse<TrelloCheckItem>> {
+    return this.makeRequest<TrelloCheckItem>(
+      `/cards/${cardId}/checkItem/${checkItemId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      },
+      `Update check item ${checkItemId} on card ${cardId}`
     );
   }
 }

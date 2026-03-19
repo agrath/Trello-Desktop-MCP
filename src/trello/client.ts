@@ -302,14 +302,15 @@ export class TrelloClient {
   }
 
   async getBoard(boardId: string, includeDetails = false): Promise<TrelloApiResponse<TrelloBoard>> {
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = {
+      lists: 'open'
+    };
     if (includeDetails) {
-      params.lists = 'open';
       params.cards = 'open';
       params.card_members = 'true';
       params.card_labels = 'true';
     }
-    
+
     return this.makeRequest<TrelloBoard>(
       `/boards/${boardId}`,
       { params },

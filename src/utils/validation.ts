@@ -40,7 +40,9 @@ export const getBoardSchema = z.object({
   apiKey: z.string().min(1, 'API key is required'),
   token: z.string().min(1, 'Token is required'),
   boardId: trelloIdSchema,
-  includeDetails: z.boolean().optional().default(false)
+  includeDetails: z.boolean().optional().default(false),
+  descriptionMaxLength: z.number().min(0).max(10000).optional(),
+  compact: z.boolean().optional()
 });
 
 export const getBoardListsSchema = z.object({

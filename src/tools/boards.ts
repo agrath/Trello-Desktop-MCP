@@ -84,7 +84,7 @@ export async function handleListBoards(args: unknown) {
 
 export const getBoardDetailsTool: Tool = {
   name: 'get_board_details',
-  description: 'Get detailed information about a specific Trello board, including its lists and cards. Useful for understanding board structure and content.',
+  description: 'Get information about a Trello board. IMPORTANT: Start with includeDetails=false (default) to get board metadata and lists only. Then use get_card or trello_get_list_cards to drill into specific cards. Only set includeDetails=true for small boards when you need a full overview.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -102,54 +102,81 @@ export const getBoardDetailsTool: Tool = {
       },
       includeDetails: {
         type: 'boolean',
-        description: 'Include lists and cards in the response for complete board overview',
+        description: 'Include all cards in the response. Default: false. WARNING: produces very large responses on busy boards. Prefer fetching board without details first, then use trello_get_list_cards or get_card for specific data.',
         default: false
+      },
+      descriptionMaxLength: {
+        type: 'number',
+        minimum: 0,
+        maximum: 10000,
+        description: 'Maximum length for card descriptions when includeDetails=true (0 to exclude). Default: 200',
+        default: 200
+      },
+      compact: {
+        type: 'boolean',
+        description: 'When includeDetails=true, return minimal card fields only (id, name, url, listId). Default: true.',
+        default: true
       }
     },
     required: ['apiKey', 'token', 'boardId']
   }
 };
 
+function truncateText(text: string | undefined | null, maxLength: number): string {
+  if (!text) return '';
+  if (maxLength === 0) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
+
 export async function handleGetBoardDetails(args: unknown) {
   try {
-    const { apiKey, token, boardId, includeDetails } = validateGetBoard(args);
+    const { apiKey, token, boardId, includeDetails, descriptionMaxLength, compact } = validateGetBoard(args);
     const client = new TrelloClient({ apiKey, token });
-    
+
+    const maxDescLen = descriptionMaxLength ?? 200;
+    const useCompact = compact ?? true;
+
     const response = await client.getBoard(boardId, includeDetails);
     const board = response.data;
-    
+
     const result = {
       summary: `Board: ${board.name}`,
       board: {
         id: board.id,
         name: board.name,
-        description: board.desc || 'No description',
+        description: truncateText(board.desc, maxDescLen) || 'No description',
         url: board.shortUrl,
         lastActivity: board.dateLastActivity,
         closed: board.closed,
         permissions: board.prefs?.permissionLevel || 'unknown',
+        lists: board.lists?.map(list => ({
+          id: list.id,
+          name: list.name
+        })) || [],
         ...(includeDetails && {
-          lists: board.lists?.map(list => ({
-            id: list.id,
-            name: list.name,
-            position: list.pos,
-            closed: list.closed
-          })) || [],
-          cards: board.cards?.map(card => ({
-            id: card.id,
-            name: card.name,
-            description: card.desc,
-            url: card.shortUrl,
-            listId: card.idList,
-            position: card.pos,
-            due: card.due,
-            closed: card.closed,
-            labels: card.labels?.map(label => ({
-              id: label.id,
-              name: label.name,
-              color: label.color
-            })) || []
-          })) || []
+          cards: useCompact
+            ? board.cards?.map(card => ({
+                id: card.id,
+                name: card.name,
+                url: card.shortUrl,
+                listId: card.idList
+              })) || []
+            : board.cards?.map(card => ({
+                id: card.id,
+                name: card.name,
+                description: truncateText(card.desc, maxDescLen),
+                url: card.shortUrl,
+                listId: card.idList,
+                position: card.pos,
+                due: card.due,
+                closed: card.closed,
+                labels: card.labels?.map(label => ({
+                  id: label.id,
+                  name: label.name,
+                  color: label.color
+                })) || []
+              })) || []
         })
       },
       rateLimit: response.rateLimit

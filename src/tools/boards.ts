@@ -98,8 +98,7 @@ export const getBoardDetailsTool: Tool = {
       },
       boardId: {
         type: 'string',
-        description: 'The ID of the board to retrieve (you can get this from list_boards)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the board (e.g. "abc123" or "https://trello.com/b/abc123/board-name")'
       },
       includeDetails: {
         type: 'boolean',
@@ -199,8 +198,7 @@ export const getListsTool: Tool = {
       },
       boardId: {
         type: 'string',
-        description: 'The ID of the board to get lists from (you can get this from list_boards)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the board (e.g. "abc123" or "https://trello.com/b/abc123/board-name")'
       },
       filter: {
         type: 'string',

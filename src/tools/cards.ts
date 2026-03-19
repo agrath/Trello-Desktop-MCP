@@ -33,8 +33,7 @@ export const createCardTool: Tool = {
       },
       idList: {
         type: 'string',
-        description: 'ID of the list where the card will be created (you can get this from get_lists)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID of the list where the card will be created (you can get this from get_lists)'
       },
       pos: {
         oneOf: [
@@ -51,16 +50,14 @@ export const createCardTool: Tool = {
       idMembers: {
         type: 'array',
         items: {
-          type: 'string',
-          pattern: '^[a-f0-9]{24}$'
+          type: 'string'
         },
         description: 'Optional array of member IDs to assign to the card'
       },
       idLabels: {
         type: 'array',
         items: {
-          type: 'string',
-          pattern: '^[a-f0-9]{24}$'
+          type: 'string'
         },
         description: 'Optional array of label IDs to categorize the card'
       }
@@ -147,8 +144,7 @@ export const updateCardTool: Tool = {
       },
       cardId: {
         type: 'string',
-        description: 'ID of the card to update (you can get this from board details or card searches)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the card to update (e.g. "abc123" or "https://trello.com/c/abc123/1-title")'
       },
       name: {
         type: 'string',
@@ -173,8 +169,7 @@ export const updateCardTool: Tool = {
       },
       idList: {
         type: 'string',
-        description: 'Move card to a different list by providing the list ID',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'Move card to a different list by providing the list ID'
       },
       pos: {
         oneOf: [
@@ -262,13 +257,11 @@ export const moveCardTool: Tool = {
       },
       cardId: {
         type: 'string',
-        description: 'ID of the card to move (you can get this from board details or card searches)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the card to move (e.g. "abc123" or "https://trello.com/c/abc123/1-title")'
       },
       idList: {
         type: 'string',
-        description: 'ID of the destination list (you can get this from get_lists)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID of the destination list (you can get this from get_lists)'
       },
       pos: {
         oneOf: [
@@ -347,8 +340,7 @@ export const getCardTool: Tool = {
       },
       cardId: {
         type: 'string',
-        description: 'ID of the card to retrieve (you can get this from board details or searches)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the card to retrieve (e.g. "abc123" or "https://trello.com/c/abc123/1-title")'
       },
       includeDetails: {
         type: 'boolean',

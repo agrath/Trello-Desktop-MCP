@@ -1,7 +1,7 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
-import { formatValidationError } from '../utils/validation.js';
+import { formatValidationError, trelloIdSchema } from '../utils/validation.js';
 
 const validateSearch = (args: unknown) => {
   const schema = z.object({
@@ -9,7 +9,7 @@ const validateSearch = (args: unknown) => {
     token: z.string().min(1, 'Token is required'),
     query: z.string().min(1, 'Search query is required'),
     modelTypes: z.array(z.enum(['boards', 'cards', 'members', 'organizations'])).optional(),
-    boardIds: z.array(z.string().regex(/^[a-f0-9]{24}$/, 'Invalid board ID format')).optional(),
+    boardIds: z.array(trelloIdSchema).optional(),
     boardsLimit: z.number().min(1).max(1000).optional(),
     cardsLimit: z.number().min(1).max(1000).optional(),
     membersLimit: z.number().min(1).max(1000).optional(),
@@ -58,10 +58,9 @@ export const trelloSearchTool: Tool = {
       boardIds: {
         type: 'array',
         items: {
-          type: 'string',
-          pattern: '^[a-f0-9]{24}$'
+          type: 'string'
         },
-        description: 'Optional: limit search to specific boards by their IDs'
+        description: 'Optional: limit search to specific boards by their IDs or URLs'
       },
       boardsLimit: {
         type: 'number',

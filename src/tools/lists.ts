@@ -1,17 +1,17 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
-import { formatValidationError } from '../utils/validation.js';
+import { formatValidationError, trelloIdSchema } from '../utils/validation.js';
 
 const validateGetListCards = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    listId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid list ID format'),
+    listId: trelloIdSchema,
     filter: z.enum(['all', 'open', 'closed']).optional(),
     fields: z.array(z.string()).optional()
   });
-  
+
   return schema.parse(args);
 };
 
@@ -20,10 +20,10 @@ const validateCreateList = (args: unknown) => {
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
     name: z.string().min(1, 'List name is required'),
-    idBoard: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid board ID format'),
+    idBoard: trelloIdSchema,
     pos: z.union([z.number().min(0), z.enum(['top', 'bottom'])]).optional()
   });
-  
+
   return schema.parse(args);
 };
 
@@ -31,10 +31,10 @@ const validateAddComment = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    cardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid card ID format'),
+    cardId: trelloIdSchema,
     text: z.string().min(1, 'Comment text is required')
   });
-  
+
   return schema.parse(args);
 };
 
@@ -54,8 +54,7 @@ export const trelloGetListCardsTool: Tool = {
       },
       listId: {
         type: 'string',
-        description: 'ID of the list to get cards from (you can get this from get_lists)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID of the list to get cards from (you can get this from get_lists)'
       },
       filter: {
         type: 'string',
@@ -161,8 +160,7 @@ export const trelloCreateListTool: Tool = {
       },
       idBoard: {
         type: 'string',
-        description: 'ID of the board where the list will be created (you can get this from list_boards)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the board where the list will be created (e.g. "abc123" or "https://trello.com/b/abc123/board-name")'
       },
       pos: {
         oneOf: [
@@ -246,8 +244,7 @@ export const trelloAddCommentTool: Tool = {
       },
       cardId: {
         type: 'string',
-        description: 'ID of the card to add comment to (you can get this from board details or searches)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the card to add comment to (e.g. "abc123" or "https://trello.com/c/abc123/1-title")'
       },
       text: {
         type: 'string',

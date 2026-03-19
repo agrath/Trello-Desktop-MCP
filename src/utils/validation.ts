@@ -1,7 +1,29 @@
 import { z } from 'zod';
 
-const trelloIdSchema = z.string().regex(/^[a-f0-9]{24}$/i, 'Must be a valid 24-character Trello ID');
-const trelloIdOptionalSchema = z.string().regex(/^[a-f0-9]{24}$/i, 'Must be a valid 24-character Trello ID').optional();
+/**
+ * Extract a Trello ID from a URL, short ID, or full 24-char hex ID.
+ *
+ * Supported formats:
+ * - Full URL: https://trello.com/c/EOY1CRmz/18-project-plan → EOY1CRmz
+ * - Full URL: https://trello.com/b/lntO1GVb/board-name → lntO1GVb
+ * - Short ID: EOY1CRmz → EOY1CRmz
+ * - Full ID: 507f1f77bcf86cd799439011 → 507f1f77bcf86cd799439011
+ */
+export function extractTrelloId(input: string): string {
+  const trimmed = input.trim();
+
+  // Try to parse as a Trello URL
+  const urlMatch = trimmed.match(/trello\.com\/[a-z]\/([a-zA-Z0-9]+)/);
+  if (urlMatch) {
+    return urlMatch[1];
+  }
+
+  // Already a valid ID (24-char hex or short alphanumeric)
+  return trimmed;
+}
+
+export const trelloIdSchema = z.string().min(1, 'ID is required').transform(extractTrelloId);
+const trelloIdOptionalSchema = z.string().min(1).transform(extractTrelloId).optional();
 
 export const credentialsSchema = z.object({
   apiKey: z.string().min(1, 'API key is required'),

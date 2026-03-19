@@ -1,19 +1,17 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
-import { formatValidationError } from '../utils/validation.js';
+import { formatValidationError, trelloIdSchema } from '../utils/validation.js';
 
 // --- Validators ---
-
-const checklistIdPattern = /^[a-f0-9]{24}$/;
 
 const validateCreateChecklist = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    cardId: z.string().regex(checklistIdPattern, 'Invalid card ID format'),
+    cardId: trelloIdSchema,
     name: z.string().min(1, 'Checklist name is required'),
-    idChecklistSource: z.string().regex(checklistIdPattern, 'Invalid source checklist ID format').optional(),
+    idChecklistSource: trelloIdSchema.optional(),
     pos: z.union([z.string(), z.number()]).optional()
   });
   return schema.parse(args);
@@ -23,7 +21,7 @@ const validateGetChecklist = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format'),
+    checklistId: trelloIdSchema,
     fields: z.array(z.string()).optional()
   });
   return schema.parse(args);
@@ -33,7 +31,7 @@ const validateUpdateChecklist = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format'),
+    checklistId: trelloIdSchema,
     name: z.string().min(1).optional(),
     pos: z.union([z.string(), z.number()]).optional()
   }).refine(data => Boolean(data.name || data.pos !== undefined), {
@@ -47,7 +45,7 @@ const validateDeleteChecklist = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format')
+    checklistId: trelloIdSchema
   });
   return schema.parse(args);
 };
@@ -56,7 +54,7 @@ const validateGetChecklistField = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format'),
+    checklistId: trelloIdSchema,
     field: z.enum(['name', 'pos'], { errorMap: () => ({ message: 'Field must be "name" or "pos"' }) })
   });
   return schema.parse(args);
@@ -66,7 +64,7 @@ const validateUpdateChecklistField = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format'),
+    checklistId: trelloIdSchema,
     field: z.enum(['name', 'pos'], { errorMap: () => ({ message: 'Field must be "name" or "pos"' }) }),
     value: z.string().min(1, 'Value is required')
   });
@@ -77,7 +75,7 @@ const validateChecklistIdOnly = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format')
+    checklistId: trelloIdSchema
   });
   return schema.parse(args);
 };
@@ -86,7 +84,7 @@ const validateGetCheckItems = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format'),
+    checklistId: trelloIdSchema,
     filter: z.enum(['all', 'complete', 'incomplete']).optional()
   });
   return schema.parse(args);
@@ -96,12 +94,12 @@ const validateCreateCheckItem = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format'),
+    checklistId: trelloIdSchema,
     name: z.string().min(1, 'Check item name is required'),
     pos: z.union([z.string(), z.number()]).optional(),
     checked: z.boolean().optional(),
     due: z.string().optional(),
-    idMember: z.string().regex(checklistIdPattern, 'Invalid member ID format').optional()
+    idMember: trelloIdSchema.optional()
   });
   return schema.parse(args);
 };
@@ -110,8 +108,8 @@ const validateGetCheckItem = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format'),
-    checkItemId: z.string().regex(checklistIdPattern, 'Invalid check item ID format')
+    checklistId: trelloIdSchema,
+    checkItemId: trelloIdSchema
   });
   return schema.parse(args);
 };
@@ -120,8 +118,8 @@ const validateDeleteCheckItem = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    checklistId: z.string().regex(checklistIdPattern, 'Invalid checklist ID format'),
-    checkItemId: z.string().regex(checklistIdPattern, 'Invalid check item ID format')
+    checklistId: trelloIdSchema,
+    checkItemId: trelloIdSchema
   });
   return schema.parse(args);
 };
@@ -130,13 +128,13 @@ const validateUpdateCheckItem = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    cardId: z.string().regex(checklistIdPattern, 'Invalid card ID format'),
-    checkItemId: z.string().regex(checklistIdPattern, 'Invalid check item ID format'),
+    cardId: trelloIdSchema,
+    checkItemId: trelloIdSchema,
     name: z.string().min(1).optional(),
     state: z.enum(['complete', 'incomplete']).optional(),
     pos: z.union([z.string(), z.number()]).optional(),
     due: z.union([z.string(), z.null()]).optional(),
-    idMember: z.union([z.string().regex(checklistIdPattern), z.null()]).optional()
+    idMember: z.union([trelloIdSchema, z.null()]).optional()
   }).refine(data => Boolean(data.name || data.state || data.pos !== undefined || data.due !== undefined || data.idMember !== undefined), {
     message: 'At least one update field must be provided',
     path: ['name']
@@ -169,9 +167,9 @@ export const trelloCreateChecklistTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      cardId: { type: 'string', description: 'ID of the card to add the checklist to', pattern: '^[a-f0-9]{24}$' },
+      cardId: { type: 'string', description: 'ID of the card to add the checklist to' },
       name: { type: 'string', description: 'Name of the checklist', minLength: 1 },
-      idChecklistSource: { type: 'string', description: 'Optional: ID of a checklist to copy items from', pattern: '^[a-f0-9]{24}$' },
+      idChecklistSource: { type: 'string', description: 'Optional: ID of a checklist to copy items from' },
       pos: { oneOf: [{ type: 'string', enum: ['top', 'bottom'] }, { type: 'number', minimum: 0 }], description: 'Position of the checklist: "top", "bottom", or a positive number' }
     },
     required: ['apiKey', 'token', 'cardId', 'name']
@@ -186,7 +184,7 @@ export const trelloGetChecklistTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist', pattern: '^[a-f0-9]{24}$' },
+      checklistId: { type: 'string', description: 'ID of the checklist' },
       fields: { type: 'array', items: { type: 'string' }, description: 'Optional: specific fields to include' }
     },
     required: ['apiKey', 'token', 'checklistId']
@@ -201,7 +199,7 @@ export const trelloUpdateChecklistTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist to update', pattern: '^[a-f0-9]{24}$' },
+      checklistId: { type: 'string', description: 'ID of the checklist to update' },
       name: { type: 'string', description: 'New name for the checklist' },
       pos: { oneOf: [{ type: 'string', enum: ['top', 'bottom'] }, { type: 'number', minimum: 0 }], description: 'New position' }
     },
@@ -217,7 +215,7 @@ export const trelloDeleteChecklistTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist to delete', pattern: '^[a-f0-9]{24}$' }
+      checklistId: { type: 'string', description: 'ID of the checklist to delete' }
     },
     required: ['apiKey', 'token', 'checklistId']
   }
@@ -231,7 +229,7 @@ export const trelloGetChecklistFieldTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist', pattern: '^[a-f0-9]{24}$' },
+      checklistId: { type: 'string', description: 'ID of the checklist' },
       field: { type: 'string', enum: ['name', 'pos'], description: 'Field to retrieve' }
     },
     required: ['apiKey', 'token', 'checklistId', 'field']
@@ -246,7 +244,7 @@ export const trelloUpdateChecklistFieldTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist', pattern: '^[a-f0-9]{24}$' },
+      checklistId: { type: 'string', description: 'ID of the checklist' },
       field: { type: 'string', enum: ['name', 'pos'], description: 'Field to update' },
       value: { type: 'string', description: 'New value for the field' }
     },
@@ -262,7 +260,7 @@ export const trelloGetBoardForChecklistTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist', pattern: '^[a-f0-9]{24}$' }
+      checklistId: { type: 'string', description: 'ID of the checklist' }
     },
     required: ['apiKey', 'token', 'checklistId']
   }
@@ -276,7 +274,7 @@ export const trelloGetCardForChecklistTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist', pattern: '^[a-f0-9]{24}$' }
+      checklistId: { type: 'string', description: 'ID of the checklist' }
     },
     required: ['apiKey', 'token', 'checklistId']
   }
@@ -290,7 +288,7 @@ export const trelloGetCheckItemsTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist', pattern: '^[a-f0-9]{24}$' },
+      checklistId: { type: 'string', description: 'ID of the checklist' },
       filter: { type: 'string', enum: ['all', 'complete', 'incomplete'], description: 'Filter items by state. Default: all', default: 'all' }
     },
     required: ['apiKey', 'token', 'checklistId']
@@ -305,12 +303,12 @@ export const trelloCreateCheckItemTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist to add the item to', pattern: '^[a-f0-9]{24}$' },
+      checklistId: { type: 'string', description: 'ID of the checklist to add the item to' },
       name: { type: 'string', description: 'Text of the check item', minLength: 1 },
       pos: { oneOf: [{ type: 'string', enum: ['top', 'bottom'] }, { type: 'number', minimum: 0 }], description: 'Position: "top", "bottom", or a number' },
       checked: { type: 'boolean', description: 'Whether the item should start as checked', default: false },
       due: { type: 'string', description: 'Due date in ISO 8601 format (e.g., "2024-12-31T23:59:59Z")', format: 'date-time' },
-      idMember: { type: 'string', description: 'ID of the member to assign', pattern: '^[a-f0-9]{24}$' }
+      idMember: { type: 'string', description: 'ID of the member to assign' }
     },
     required: ['apiKey', 'token', 'checklistId', 'name']
   }
@@ -324,8 +322,8 @@ export const trelloGetCheckItemTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist', pattern: '^[a-f0-9]{24}$' },
-      checkItemId: { type: 'string', description: 'ID of the check item', pattern: '^[a-f0-9]{24}$' }
+      checklistId: { type: 'string', description: 'ID of the checklist' },
+      checkItemId: { type: 'string', description: 'ID of the check item' }
     },
     required: ['apiKey', 'token', 'checklistId', 'checkItemId']
   }
@@ -339,8 +337,8 @@ export const trelloDeleteCheckItemTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      checklistId: { type: 'string', description: 'ID of the checklist', pattern: '^[a-f0-9]{24}$' },
-      checkItemId: { type: 'string', description: 'ID of the check item to delete', pattern: '^[a-f0-9]{24}$' }
+      checklistId: { type: 'string', description: 'ID of the checklist' },
+      checkItemId: { type: 'string', description: 'ID of the check item to delete' }
     },
     required: ['apiKey', 'token', 'checklistId', 'checkItemId']
   }
@@ -354,8 +352,8 @@ export const trelloUpdateCheckItemTool: Tool = {
     properties: {
       apiKey: { type: 'string', description: 'Trello API key (automatically provided by Claude.app from your stored credentials)' },
       token: { type: 'string', description: 'Trello API token (automatically provided by Claude.app from your stored credentials)' },
-      cardId: { type: 'string', description: 'ID of the card the check item belongs to', pattern: '^[a-f0-9]{24}$' },
-      checkItemId: { type: 'string', description: 'ID of the check item to update', pattern: '^[a-f0-9]{24}$' },
+      cardId: { type: 'string', description: 'ID of the card the check item belongs to' },
+      checkItemId: { type: 'string', description: 'ID of the check item to update' },
       name: { type: 'string', description: 'New name for the check item' },
       state: { type: 'string', enum: ['complete', 'incomplete'], description: 'Set to "complete" to check or "incomplete" to uncheck' },
       pos: { oneOf: [{ type: 'string', enum: ['top', 'bottom'] }, { type: 'number', minimum: 0 }], description: 'New position' },

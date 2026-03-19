@@ -1,7 +1,7 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
-import { formatValidationError } from '../utils/validation.js';
+import { formatValidationError, trelloIdSchema } from '../utils/validation.js';
 
 function truncateText(text: string | undefined | null, maxLength: number): string {
   if (!text) return '';
@@ -14,7 +14,7 @@ const validateGetBoardCards = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    boardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid board ID format'),
+    boardId: trelloIdSchema,
     attachments: z.string().optional(),
     members: z.string().optional(),
     filter: z.string().optional(),
@@ -30,7 +30,7 @@ const validateGetCardActions = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    cardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid card ID format'),
+    cardId: trelloIdSchema,
     filter: z.string().optional(),
     limit: z.number().min(1).max(1000).optional()
   });
@@ -42,7 +42,7 @@ const validateGetCardAttachments = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    cardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid card ID format'),
+    cardId: trelloIdSchema,
     fields: z.array(z.string()).optional()
   });
 
@@ -53,7 +53,7 @@ const validateGetCardChecklists = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    cardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid card ID format'),
+    cardId: trelloIdSchema,
     checkItems: z.string().optional(),
     fields: z.array(z.string()).optional()
   });
@@ -65,7 +65,7 @@ const validateGetBoardMembers = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    boardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid board ID format')
+    boardId: trelloIdSchema
   });
 
   return schema.parse(args);
@@ -75,7 +75,7 @@ const validateGetBoardLabels = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    boardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid board ID format')
+    boardId: trelloIdSchema
   });
 
   return schema.parse(args);
@@ -85,7 +85,7 @@ const validateCreateLabel = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    boardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid board ID format'),
+    boardId: trelloIdSchema,
     name: z.string().min(1, 'Label name is required').max(16384, 'Label name too long'),
     color: z.string().min(1, 'Color is required')
   });
@@ -97,7 +97,7 @@ const validateUpdateLabel = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    labelId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid label ID format'),
+    labelId: trelloIdSchema,
     name: z.string().min(1).max(16384).optional(),
     color: z.string().min(1).optional()
   }).refine(data => Boolean(data.name || data.color), {
@@ -112,8 +112,8 @@ const validateAddLabelToCard = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    cardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid card ID format'),
-    labelId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid label ID format')
+    cardId: trelloIdSchema,
+    labelId: trelloIdSchema
   });
 
   return schema.parse(args);
@@ -123,8 +123,8 @@ const validateRemoveLabelFromCard = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
     token: z.string().min(1, 'Token is required'),
-    cardId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid card ID format'),
-    labelId: z.string().regex(/^[a-f0-9]{24}$/, 'Invalid label ID format')
+    cardId: trelloIdSchema,
+    labelId: trelloIdSchema
   });
 
   return schema.parse(args);
@@ -146,8 +146,8 @@ export const trelloGetBoardCardsTool: Tool = {
       },
       boardId: {
         type: 'string',
-        description: 'ID of the board to get cards from (you can get this from list_boards)',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the board (e.g. "abc123" or "https://trello.com/b/abc123/board-name")',
+
       },
       attachments: {
         type: 'string',
@@ -309,8 +309,8 @@ export const trelloGetCardActionsTool: Tool = {
       },
       cardId: {
         type: 'string',
-        description: 'ID of the card to get actions for',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the card (e.g. "abc123" or "https://trello.com/c/abc123/1-title")',
+
       },
       filter: {
         type: 'string',
@@ -412,8 +412,8 @@ export const trelloGetCardAttachmentsTool: Tool = {
       },
       cardId: {
         type: 'string',
-        description: 'ID of the card to get attachments for',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the card (e.g. "abc123" or "https://trello.com/c/abc123/1-title")',
+
       },
       fields: {
         type: 'array',
@@ -499,8 +499,8 @@ export const trelloGetCardChecklistsTool: Tool = {
       },
       cardId: {
         type: 'string',
-        description: 'ID of the card to get checklists for',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the card (e.g. "abc123" or "https://trello.com/c/abc123/1-title")',
+
       },
       checkItems: {
         type: 'string',
@@ -591,8 +591,8 @@ export const trelloGetBoardMembersTool: Tool = {
       },
       boardId: {
         type: 'string',
-        description: 'ID of the board to get members for',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the board (e.g. "abc123" or "https://trello.com/b/abc123/board-name")',
+
       }
     },
     required: ['apiKey', 'token', 'boardId']
@@ -665,8 +665,8 @@ export const trelloGetBoardLabelsTool: Tool = {
       },
       boardId: {
         type: 'string',
-        description: 'ID of the board to get labels for',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the board (e.g. "abc123" or "https://trello.com/b/abc123/board-name")',
+
       }
     },
     required: ['apiKey', 'token', 'boardId']
@@ -736,8 +736,8 @@ export const trelloCreateLabelTool: Tool = {
       },
       boardId: {
         type: 'string',
-        description: 'ID of the board where the label will be created',
-        pattern: '^[a-f0-9]{24}$'
+        description: 'ID or URL of the board where the label will be created',
+
       },
       name: {
         type: 'string',
@@ -817,7 +817,7 @@ export const trelloUpdateLabelTool: Tool = {
       labelId: {
         type: 'string',
         description: 'ID of the label to update',
-        pattern: '^[a-f0-9]{24}$'
+
       },
       name: {
         type: 'string',
@@ -897,12 +897,12 @@ export const trelloAddLabelToCardTool: Tool = {
       cardId: {
         type: 'string',
         description: 'ID of the card to label',
-        pattern: '^[a-f0-9]{24}$'
+
       },
       labelId: {
         type: 'string',
         description: 'ID of the label to add',
-        pattern: '^[a-f0-9]{24}$'
+
       }
     },
     required: ['apiKey', 'token', 'cardId', 'labelId']
@@ -967,12 +967,12 @@ export const trelloRemoveLabelFromCardTool: Tool = {
       cardId: {
         type: 'string',
         description: 'ID of the card to remove the label from',
-        pattern: '^[a-f0-9]{24}$'
+
       },
       labelId: {
         type: 'string',
         description: 'ID of the label to remove',
-        pattern: '^[a-f0-9]{24}$'
+
       }
     },
     required: ['apiKey', 'token', 'cardId', 'labelId']

@@ -49,6 +49,46 @@ const validateGetCardAttachments = (args: unknown) => {
   return schema.parse(args);
 };
 
+const validateCreateCardAttachment = (args: unknown) => {
+  const schema = z.object({
+    apiKey: z.string().min(1, 'API key is required'),
+    token: z.string().min(1, 'Token is required'),
+    cardId: trelloIdSchema,
+    url: z.string().url().optional(),
+    filePath: z.string().optional(),
+    name: z.string().optional(),
+    mimeType: z.string().optional(),
+    setCover: z.boolean().optional()
+  }).refine(data => data.url || data.filePath, {
+    message: 'Either url or filePath must be provided'
+  });
+
+  return schema.parse(args);
+};
+
+const validateGetCardAttachment = (args: unknown) => {
+  const schema = z.object({
+    apiKey: z.string().min(1, 'API key is required'),
+    token: z.string().min(1, 'Token is required'),
+    cardId: trelloIdSchema,
+    attachmentId: z.string().min(1, 'Attachment ID is required'),
+    fields: z.array(z.string()).optional()
+  });
+
+  return schema.parse(args);
+};
+
+const validateDeleteCardAttachment = (args: unknown) => {
+  const schema = z.object({
+    apiKey: z.string().min(1, 'API key is required'),
+    token: z.string().min(1, 'Token is required'),
+    cardId: trelloIdSchema,
+    attachmentId: z.string().min(1, 'Attachment ID is required')
+  });
+
+  return schema.parse(args);
+};
+
 const validateGetCardChecklists = (args: unknown) => {
   const schema = z.object({
     apiKey: z.string().min(1, 'API key is required'),
@@ -1013,6 +1053,269 @@ export async function handleTrelloRemoveLabelFromCard(args: unknown) {
         {
           type: 'text' as const,
           text: `Error removing label from card: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+// Attachment management tools
+
+export const trelloCreateCardAttachmentTool: Tool = {
+  name: 'trello_create_card_attachment',
+  description: 'Attach a URL or local file to a Trello card. Provide either a url (for link attachments) or filePath (for file uploads from the local filesystem).',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      apiKey: {
+        type: 'string',
+        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+      },
+      token: {
+        type: 'string',
+        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+      },
+      cardId: {
+        type: 'string',
+        description: 'ID or URL of the card (e.g. "abc123" or "https://trello.com/c/abc123/1-title")'
+      },
+      url: {
+        type: 'string',
+        description: 'URL to attach as a link (e.g. "https://example.com/doc.pdf"). Cannot be used with filePath.'
+      },
+      filePath: {
+        type: 'string',
+        description: 'Absolute path to a local file to upload (e.g. "/home/user/report.pdf"). Cannot be used with url.'
+      },
+      name: {
+        type: 'string',
+        description: 'Optional display name for the attachment'
+      },
+      mimeType: {
+        type: 'string',
+        description: 'Optional MIME type (e.g. "application/pdf", "image/png"). Auto-detected for file uploads if omitted.'
+      },
+      setCover: {
+        type: 'boolean',
+        description: 'If true, set this attachment as the card cover image'
+      }
+    },
+    required: ['apiKey', 'token', 'cardId']
+  }
+};
+
+export async function handleTrelloCreateCardAttachment(args: unknown) {
+  try {
+    const { apiKey, token, cardId, url, filePath, name, mimeType, setCover } = validateCreateCardAttachment(args);
+    const client = new TrelloClient({ apiKey, token });
+
+    const response = await client.createCardAttachment(cardId, {
+      ...(url && { url }),
+      ...(filePath && { filePath }),
+      ...(name && { name }),
+      ...(mimeType && { mimeType }),
+      ...(setCover !== undefined && { setCover })
+    });
+    const attachment = response.data;
+
+    const result = {
+      summary: filePath
+        ? `Uploaded file attachment to card ${cardId}`
+        : `Attached URL to card ${cardId}`,
+      cardId,
+      attachment: {
+        id: attachment.id,
+        name: attachment.name,
+        url: attachment.url,
+        mimeType: attachment.mimeType,
+        bytes: attachment.bytes,
+        isUpload: attachment.isUpload,
+        date: attachment.date
+      },
+      rateLimit: response.rateLimit
+    };
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  } catch (error) {
+    const errorMessage = error instanceof z.ZodError
+      ? formatValidationError(error)
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error occurred';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error creating attachment: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+export const trelloGetCardAttachmentTool: Tool = {
+  name: 'trello_get_card_attachment',
+  description: 'Get details of a single attachment on a Trello card by its attachment ID.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      apiKey: {
+        type: 'string',
+        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+      },
+      token: {
+        type: 'string',
+        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+      },
+      cardId: {
+        type: 'string',
+        description: 'ID or URL of the card (e.g. "abc123" or "https://trello.com/c/abc123/1-title")'
+      },
+      attachmentId: {
+        type: 'string',
+        description: 'ID of the attachment to retrieve'
+      },
+      fields: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional: specific fields to include (e.g., ["name", "url", "mimeType", "date"])'
+      }
+    },
+    required: ['apiKey', 'token', 'cardId', 'attachmentId']
+  }
+};
+
+export async function handleTrelloGetCardAttachment(args: unknown) {
+  try {
+    const { apiKey, token, cardId, attachmentId, fields } = validateGetCardAttachment(args);
+    const client = new TrelloClient({ apiKey, token });
+
+    const response = await client.getCardAttachment(cardId, attachmentId, {
+      ...(fields && { fields })
+    });
+    const attachment = response.data;
+
+    const result = {
+      summary: `Retrieved attachment ${attachmentId} from card ${cardId}`,
+      cardId,
+      attachment: {
+        id: attachment.id,
+        name: attachment.name,
+        url: attachment.url,
+        mimeType: attachment.mimeType,
+        date: attachment.date,
+        bytes: attachment.bytes,
+        isUpload: attachment.isUpload,
+        pos: attachment.pos,
+        edgeColor: attachment.edgeColor,
+        previews: attachment.previews?.map((preview: any) => ({
+          id: preview.id,
+          width: preview.width,
+          height: preview.height,
+          url: preview.url
+        })) || []
+      },
+      rateLimit: response.rateLimit
+    };
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  } catch (error) {
+    const errorMessage = error instanceof z.ZodError
+      ? formatValidationError(error)
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error occurred';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error getting attachment: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+export const trelloDeleteCardAttachmentTool: Tool = {
+  name: 'trello_delete_card_attachment',
+  description: 'Delete an attachment from a Trello card.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      apiKey: {
+        type: 'string',
+        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+      },
+      token: {
+        type: 'string',
+        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+      },
+      cardId: {
+        type: 'string',
+        description: 'ID or URL of the card (e.g. "abc123" or "https://trello.com/c/abc123/1-title")'
+      },
+      attachmentId: {
+        type: 'string',
+        description: 'ID of the attachment to delete'
+      }
+    },
+    required: ['apiKey', 'token', 'cardId', 'attachmentId']
+  }
+};
+
+export async function handleTrelloDeleteCardAttachment(args: unknown) {
+  try {
+    const { apiKey, token, cardId, attachmentId } = validateDeleteCardAttachment(args);
+    const client = new TrelloClient({ apiKey, token });
+
+    const response = await client.deleteCardAttachment(cardId, attachmentId);
+
+    const result = {
+      summary: `Deleted attachment ${attachmentId} from card ${cardId}`,
+      cardId,
+      attachmentId,
+      rateLimit: response.rateLimit
+    };
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  } catch (error) {
+    const errorMessage = error instanceof z.ZodError
+      ? formatValidationError(error)
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error occurred';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error deleting attachment: ${errorMessage}`
         }
       ],
       isError: true

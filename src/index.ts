@@ -84,7 +84,13 @@ import {
   trelloAddLabelToCardTool,
   handleTrelloAddLabelToCard,
   trelloRemoveLabelFromCardTool,
-  handleTrelloRemoveLabelFromCard
+  handleTrelloRemoveLabelFromCard,
+  trelloCreateCardAttachmentTool,
+  handleTrelloCreateCardAttachment,
+  trelloGetCardAttachmentTool,
+  handleTrelloGetCardAttachment,
+  trelloDeleteCardAttachmentTool,
+  handleTrelloDeleteCardAttachment
 } from './tools/advanced.js';
 
 import {
@@ -172,6 +178,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       trelloGetBoardCardsTool,
       trelloGetCardActionsTool,
       trelloGetCardAttachmentsTool,
+      trelloCreateCardAttachmentTool,
+      trelloGetCardAttachmentTool,
+      trelloDeleteCardAttachmentTool,
       trelloGetCardChecklistsTool,
       trelloGetBoardMembersTool,
       trelloGetBoardLabelsTool,
@@ -280,6 +289,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'trello_get_card_attachments':
         result = await handleTrelloGetCardAttachments(argsWithCredentials);
+        break;
+
+      case 'trello_create_card_attachment':
+        result = await handleTrelloCreateCardAttachment(argsWithCredentials);
+        break;
+
+      case 'trello_get_card_attachment':
+        result = await handleTrelloGetCardAttachment(argsWithCredentials);
+        break;
+
+      case 'trello_delete_card_attachment':
+        result = await handleTrelloDeleteCardAttachment(argsWithCredentials);
         break;
 
       case 'trello_get_card_checklists':

@@ -1,3 +1,5 @@
+import { readFile } from 'fs/promises';
+import { basename } from 'path';
 import { logger } from '../utils/logger.js';
 import { insights } from '../utils/appInsights.js';
 import type {
@@ -181,12 +183,16 @@ export class TrelloClient {
     
     for (let attempt = 1; attempt <= this.retryConfig.maxRetries; attempt++) {
       try {
+        // Skip Content-Type for FormData bodies (fetch sets multipart boundary automatically)
+        const isFormData = fetchOptions.body instanceof FormData;
+        const headers: Record<string, string> = {
+          'User-Agent': 'TrelloMCPServer/1.0.0 (Node.js 22)',
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+          ...fetchOptions.headers as Record<string, string>
+        };
+
         const response = await this.fetchWithTimeout(url, {
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'TrelloMCPServer/1.0.0 (Node.js 22)',
-            ...fetchOptions.headers
-          },
+          headers,
           ...fetchOptions
         });
         
@@ -580,6 +586,76 @@ export class TrelloClient {
       `/cards/${cardId}/attachments`,
       { params },
       `Get attachments for card ${cardId}`
+    );
+  }
+
+  async createCardAttachment(cardId: string, data: {
+    url?: string;
+    filePath?: string;
+    name?: string;
+    mimeType?: string;
+    setCover?: boolean;
+  }): Promise<TrelloApiResponse<any>> {
+    if (data.filePath) {
+      // File upload via multipart/form-data
+      const fileBuffer = await readFile(data.filePath);
+      const fileName = data.name || basename(data.filePath);
+      const blob = new Blob([fileBuffer], { type: data.mimeType || 'application/octet-stream' });
+
+      const formData = new FormData();
+      formData.append('file', blob, fileName);
+      if (data.name) formData.append('name', data.name);
+      if (data.mimeType) formData.append('mimeType', data.mimeType);
+      if (data.setCover !== undefined) formData.append('setCover', String(data.setCover));
+
+      return this.makeRequest<any>(
+        `/cards/${cardId}/attachments`,
+        {
+          method: 'POST',
+          body: formData as any
+        },
+        `Upload file attachment to card ${cardId}`
+      );
+    }
+
+    // URL attachment via JSON body
+    const body: Record<string, any> = {};
+    if (data.url) body.url = data.url;
+    if (data.name) body.name = data.name;
+    if (data.mimeType) body.mimeType = data.mimeType;
+    if (data.setCover !== undefined) body.setCover = data.setCover;
+
+    return this.makeRequest<any>(
+      `/cards/${cardId}/attachments`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body)
+      },
+      `Create URL attachment on card ${cardId}`
+    );
+  }
+
+  async getCardAttachment(cardId: string, attachmentId: string, options?: {
+    fields?: string[];
+  }): Promise<TrelloApiResponse<any>> {
+    const params: Record<string, string> = {};
+
+    if (options?.fields) {
+      params.fields = options.fields.join(',');
+    }
+
+    return this.makeRequest<any>(
+      `/cards/${cardId}/attachments/${attachmentId}`,
+      { params },
+      `Get attachment ${attachmentId} for card ${cardId}`
+    );
+  }
+
+  async deleteCardAttachment(cardId: string, attachmentId: string): Promise<TrelloApiResponse<void>> {
+    return this.makeRequest<void>(
+      `/cards/${cardId}/attachments/${attachmentId}`,
+      { method: 'DELETE' },
+      `Delete attachment ${attachmentId} from card ${cardId}`
     );
   }
 

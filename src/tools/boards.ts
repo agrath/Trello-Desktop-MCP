@@ -1,11 +1,12 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
-import { 
-  validateListBoards, 
-  validateGetBoard, 
-  validateGetBoardLists, 
-  formatValidationError 
+import {
+  validateListBoards,
+  validateGetBoard,
+  validateGetBoardLists,
+  formatValidationError,
+  trelloIdSchema
 } from '../utils/validation.js';
 
 export const listBoardsTool: Tool = {
@@ -279,6 +280,91 @@ export async function handleGetLists(args: unknown) {
         {
           type: 'text' as const,
           text: `Error getting lists: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+const validateFilterLists = (args: unknown) => {
+  const schema = z.object({
+    apiKey: z.string().min(1, 'API key is required'),
+    token: z.string().min(1, 'Token is required'),
+    boardId: trelloIdSchema,
+    filter: z.string().min(1, 'Filter string is required')
+  });
+  return schema.parse(args);
+};
+
+export const trelloFilterListsTool: Tool = {
+  name: 'trello_filter_lists',
+  description: 'Filter lists on a board by name. Returns lists whose name contains the filter string (case-insensitive).',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      apiKey: {
+        type: 'string',
+        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+      },
+      token: {
+        type: 'string',
+        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+      },
+      boardId: {
+        type: 'string',
+        description: 'ID or URL of the board (e.g. "abc123" or "https://trello.com/b/abc123/board-name")'
+      },
+      filter: {
+        type: 'string',
+        description: 'Search string to filter lists by name (case-insensitive)'
+      }
+    },
+    required: ['apiKey', 'token', 'boardId', 'filter']
+  }
+};
+
+export async function handleTrelloFilterLists(args: unknown) {
+  try {
+    const { apiKey, token, boardId, filter } = validateFilterLists(args);
+    const client = new TrelloClient({ apiKey, token });
+
+    const response = await client.getBoardLists(boardId);
+    const allLists = response.data;
+    const matched = allLists.filter(list => list.name.toLowerCase().includes(filter.toLowerCase()));
+
+    const result = {
+      summary: `Found ${matched.length} list(s) matching '${filter}' (of ${allLists.length} total)`,
+      boardId,
+      lists: matched.map(list => ({
+        id: list.id,
+        name: list.name,
+        position: list.pos,
+        closed: list.closed
+      })),
+      rateLimit: response.rateLimit
+    };
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  } catch (error) {
+    const errorMessage = error instanceof z.ZodError
+      ? formatValidationError(error)
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error occurred';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error filtering lists: ${errorMessage}`
         }
       ],
       isError: true

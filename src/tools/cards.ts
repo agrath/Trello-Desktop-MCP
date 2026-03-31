@@ -1,12 +1,13 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
-import { 
-  validateCreateCard, 
-  validateUpdateCard, 
-  validateMoveCard, 
+import {
+  validateCreateCard,
+  validateUpdateCard,
+  validateMoveCard,
   validateGetCard,
-  formatValidationError 
+  formatValidationError,
+  trelloIdSchema
 } from '../utils/validation.js';
 
 export const createCardTool: Tool = {
@@ -429,6 +430,89 @@ export async function handleGetCard(args: unknown) {
         {
           type: 'text' as const,
           text: `Error getting card: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+const validateArchiveCard = (args: unknown) => {
+  const schema = z.object({
+    apiKey: z.string().min(1, 'API key is required'),
+    token: z.string().min(1, 'Token is required'),
+    cardId: trelloIdSchema,
+    value: z.boolean().describe('true to archive, false to unarchive')
+  });
+  return schema.parse(args);
+};
+
+export const trelloArchiveCardTool: Tool = {
+  name: 'trello_archive_card',
+  description: 'Archive or unarchive a Trello card. Set value to true to archive, false to unarchive.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      apiKey: {
+        type: 'string',
+        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+      },
+      token: {
+        type: 'string',
+        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+      },
+      cardId: {
+        type: 'string',
+        description: 'ID or URL of the card to archive/unarchive (e.g. "abc123" or "https://trello.com/c/abc123/1-title")'
+      },
+      value: {
+        type: 'boolean',
+        description: 'true to archive, false to unarchive'
+      }
+    },
+    required: ['apiKey', 'token', 'cardId', 'value']
+  }
+};
+
+export async function handleArchiveCard(args: unknown) {
+  try {
+    const { apiKey, token, cardId, value } = validateArchiveCard(args);
+    const client = new TrelloClient({ apiKey, token });
+
+    const response = await client.updateCard(cardId, { closed: value });
+    const card = response.data;
+
+    const result = {
+      summary: value ? 'Card archived successfully' : 'Card unarchived successfully',
+      card: {
+        id: card.id,
+        name: card.name,
+        url: card.shortUrl,
+        closed: card.closed
+      },
+      rateLimit: response.rateLimit
+    };
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  } catch (error) {
+    const errorMessage = error instanceof z.ZodError
+      ? formatValidationError(error)
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error occurred';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error archiving card: ${errorMessage}`
         }
       ],
       isError: true

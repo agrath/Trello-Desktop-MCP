@@ -224,3 +224,43 @@ export interface TrelloCustomFieldItem {
     date?: string;
   };
 }
+
+export interface TrelloUser extends TrelloMember {
+  email?: string;
+  bio?: string;
+  url?: string;
+  memberType?: string;
+  confirmed?: boolean;
+}
+
+export interface TrelloAction {
+  id: string;
+  type: string;
+  date: string;
+  data: {
+    text?: string;
+    card?: { id: string; name: string; shortLink?: string };
+    board?: { id: string; name: string; shortLink?: string };
+    list?: { id: string; name: string };
+    old?: Record<string, unknown>;
+  };
+  memberCreator: TrelloMember;
+}
+
+export interface TrelloComment {
+  id: string;
+  type: 'commentCard';
+  date: string;
+  data: {
+    text: string;
+    card: { id: string; name: string; shortLink?: string };
+  };
+  memberCreator: TrelloMember;
+}
+
+export interface TrelloSearchResults {
+  boards?: TrelloBoard[];
+  cards?: TrelloCard[];
+  members?: TrelloMember[];
+  organizations?: { id: string; name: string; displayName: string }[];
+}

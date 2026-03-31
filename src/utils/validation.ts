@@ -13,7 +13,7 @@ export function extractTrelloId(input: string): string {
   const trimmed = input.trim();
 
   // Try to parse as a Trello URL
-  const urlMatch = trimmed.match(/trello\.com\/[a-z]\/([a-zA-Z0-9]+)/);
+  const urlMatch = trimmed.match(/trello\.com\/[a-z]\/([a-zA-Z0-9]+)/i);
   if (urlMatch) {
     return urlMatch[1];
   }

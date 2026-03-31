@@ -13,7 +13,7 @@ import {
   ListPromptsRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
 
-// Desktop-specific: Check for local credentials
+// Read credentials from environment variables
 const TRELLO_API_KEY = process.env.TRELLO_API_KEY;
 const TRELLO_TOKEN = process.env.TRELLO_TOKEN;
 
@@ -29,7 +29,9 @@ import {
   getListsTool,
   handleListBoards,
   handleGetBoardDetails,
-  handleGetLists
+  handleGetLists,
+  trelloFilterListsTool,
+  handleTrelloFilterLists
 } from './tools/boards.js';
 
 import {
@@ -40,7 +42,9 @@ import {
   handleCreateCard,
   handleUpdateCard,
   handleMoveCard,
-  handleGetCard
+  handleGetCard,
+  trelloArchiveCardTool,
+  handleArchiveCard
 } from './tools/cards.js';
 
 import {
@@ -90,7 +94,15 @@ import {
   trelloGetCardAttachmentTool,
   handleTrelloGetCardAttachment,
   trelloDeleteCardAttachmentTool,
-  handleTrelloDeleteCardAttachment
+  handleTrelloDeleteCardAttachment,
+  trelloGetBoardCustomFieldsTool,
+  handleTrelloGetBoardCustomFields,
+  trelloAddMemberToCardTool,
+  handleTrelloAddMemberToCard,
+  trelloRemoveMemberFromCardTool,
+  handleTrelloRemoveMemberFromCard,
+  trelloDeleteLabelTool,
+  handleTrelloDeleteLabel
 } from './tools/advanced.js';
 
 import {
@@ -125,7 +137,7 @@ import {
 // Create server instance
 const server = new Server(
   {
-    name: 'trello-mcp-desktop',
+    name: 'trello-mcp',
     version: '1.0.0',
   },
   {
@@ -147,7 +159,7 @@ server.setRequestHandler(InitializeRequestSchema, async () => {
       prompts: {}
     },
     serverInfo: {
-      name: 'trello-mcp-desktop',
+      name: 'trello-mcp',
       version: '1.0.0'
     }
   };
@@ -189,6 +201,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       trelloUpdateLabelTool,
       trelloAddLabelToCardTool,
       trelloRemoveLabelFromCardTool,
+      trelloDeleteLabelTool,
+      // Member management on cards
+      trelloAddMemberToCardTool,
+      trelloRemoveMemberFromCardTool,
+      // Custom fields
+      trelloGetBoardCustomFieldsTool,
+      // Card archiving
+      trelloArchiveCardTool,
+      // List filtering
+      trelloFilterListsTool,
       // Checklist management
       trelloCreateChecklistTool,
       trelloGetChecklistTool,
@@ -330,6 +352,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'trello_remove_label_from_card':
         result = await handleTrelloRemoveLabelFromCard(argsWithCredentials);
+        break;
+
+      case 'trello_delete_label':
+        result = await handleTrelloDeleteLabel(argsWithCredentials);
+        break;
+
+      // Member management on cards
+      case 'trello_add_member_to_card':
+        result = await handleTrelloAddMemberToCard(argsWithCredentials);
+        break;
+
+      case 'trello_remove_member_from_card':
+        result = await handleTrelloRemoveMemberFromCard(argsWithCredentials);
+        break;
+
+      // Custom fields
+      case 'trello_get_board_custom_fields':
+        result = await handleTrelloGetBoardCustomFields(argsWithCredentials);
+        break;
+
+      // Card archiving
+      case 'trello_archive_card':
+        result = await handleArchiveCard(argsWithCredentials);
+        break;
+
+      // List filtering
+      case 'trello_filter_lists':
+        result = await handleTrelloFilterLists(argsWithCredentials);
         break;
 
       // Checklist management

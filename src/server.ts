@@ -7,23 +7,27 @@ import {
   ListPromptsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-import { 
-  listBoardsTool, 
+import {
+  listBoardsTool,
   handleListBoards,
   getBoardDetailsTool,
   handleGetBoardDetails,
   getListsTool,
-  handleGetLists
+  handleGetLists,
+  trelloFilterListsTool,
+  handleTrelloFilterLists
 } from './tools/boards.js';
-import { 
-  createCardTool, 
+import {
+  createCardTool,
   handleCreateCard,
   updateCardTool,
   handleUpdateCard,
   moveCardTool,
   handleMoveCard,
   getCardTool,
-  handleGetCard
+  handleGetCard,
+  trelloArchiveCardTool,
+  handleArchiveCard
 } from './tools/cards.js';
 import {
   trelloSearchTool,
@@ -63,7 +67,15 @@ import {
   trelloAddLabelToCardTool,
   handleTrelloAddLabelToCard,
   trelloRemoveLabelFromCardTool,
-  handleTrelloRemoveLabelFromCard
+  handleTrelloRemoveLabelFromCard,
+  trelloGetBoardCustomFieldsTool,
+  handleTrelloGetBoardCustomFields,
+  trelloAddMemberToCardTool,
+  handleTrelloAddMemberToCard,
+  trelloRemoveMemberFromCardTool,
+  handleTrelloRemoveMemberFromCard,
+  trelloDeleteLabelTool,
+  handleTrelloDeleteLabel
 } from './tools/advanced.js';
 
 import {
@@ -95,7 +107,21 @@ import {
   handleTrelloUpdateCheckItem
 } from './tools/checklists.js';
 
+const WRITE_TOOL_NAMES = new Set([
+  'create_card', 'update_card', 'move_card', 'trello_archive_card',
+  'trello_add_comment', 'trello_create_list',
+  'trello_create_label', 'trello_update_label', 'trello_delete_label',
+  'trello_add_label_to_card', 'trello_remove_label_from_card',
+  'trello_add_member_to_card', 'trello_remove_member_from_card',
+  'trello_create_checklist', 'trello_update_checklist', 'trello_delete_checklist',
+  'trello_update_checklist_field',
+  'trello_create_check_item', 'trello_delete_check_item', 'trello_update_check_item',
+  'trello_create_card_attachment', 'trello_delete_card_attachment'
+]);
+
 export function createMCPServer() {
+  const readOnly = process.env.TRELLO_READ_ONLY === 'true';
+
   const server = new Server(
     {
       name: 'trello-mcp-server',
@@ -128,8 +154,7 @@ export function createMCPServer() {
 
   // Handle list tools request
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-      tools: [
+    const allTools = [
         // Phase 1: Essential tools
         trelloSearchTool,
         trelloGetUserBoardsTool,
@@ -158,6 +183,16 @@ export function createMCPServer() {
         trelloUpdateLabelTool,
         trelloAddLabelToCardTool,
         trelloRemoveLabelFromCardTool,
+        trelloDeleteLabelTool,
+        // Member management on cards
+        trelloAddMemberToCardTool,
+        trelloRemoveMemberFromCardTool,
+        // Custom fields
+        trelloGetBoardCustomFieldsTool,
+        // Card archiving
+        trelloArchiveCardTool,
+        // List filtering
+        trelloFilterListsTool,
         // Checklist management
         trelloCreateChecklistTool,
         trelloGetChecklistTool,
@@ -172,8 +207,11 @@ export function createMCPServer() {
         trelloGetCheckItemTool,
         trelloDeleteCheckItemTool,
         trelloUpdateCheckItemTool
-      ],
-    };
+      ];
+
+      return {
+        tools: readOnly ? allTools.filter(t => !WRITE_TOOL_NAMES.has(t.name)) : allTools,
+      };
   });
 
   // Handle list resources request (required by MCP spec)
@@ -192,6 +230,13 @@ export function createMCPServer() {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+
+    if (readOnly && WRITE_TOOL_NAMES.has(name)) {
+      return {
+        content: [{ type: 'text' as const, text: `Error: Tool '${name}' is not available in read-only mode` }],
+        isError: true
+      };
+    }
 
     switch (name) {
       // Phase 1: Essential tools
@@ -267,6 +312,28 @@ export function createMCPServer() {
 
       case 'trello_remove_label_from_card':
         return await handleTrelloRemoveLabelFromCard(args);
+
+      case 'trello_delete_label':
+        return await handleTrelloDeleteLabel(args);
+
+      // Member management on cards
+      case 'trello_add_member_to_card':
+        return await handleTrelloAddMemberToCard(args);
+
+      case 'trello_remove_member_from_card':
+        return await handleTrelloRemoveMemberFromCard(args);
+
+      // Custom fields
+      case 'trello_get_board_custom_fields':
+        return await handleTrelloGetBoardCustomFields(args);
+
+      // Card archiving
+      case 'trello_archive_card':
+        return await handleArchiveCard(args);
+
+      // List filtering
+      case 'trello_filter_lists':
+        return await handleTrelloFilterLists(args);
 
       // Checklist management
       case 'trello_create_checklist':

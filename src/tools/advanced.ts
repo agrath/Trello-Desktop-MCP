@@ -1,7 +1,7 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
-import { formatValidationError, trelloIdSchema } from '../utils/validation.js';
+import { formatValidationError, trelloIdSchema, extractCredentials } from '../utils/validation.js';
 
 function truncateText(text: string | undefined | null, maxLength: number): string {
   if (!text) return '';
@@ -10,10 +10,18 @@ function truncateText(text: string | undefined | null, maxLength: number): strin
   return text.substring(0, maxLength) + '...';
 }
 
+const validateGetBoardCustomFields = (args: unknown) => {
+  const schema = z.object({
+
+    boardId: trelloIdSchema
+  });
+
+  return schema.parse(args);
+};
+
 const validateGetBoardCards = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     boardId: trelloIdSchema,
     attachments: z.string().optional(),
     members: z.string().optional(),
@@ -28,8 +36,7 @@ const validateGetBoardCards = (args: unknown) => {
 
 const validateGetCardActions = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     cardId: trelloIdSchema,
     filter: z.string().optional(),
     limit: z.number().min(1).max(1000).optional()
@@ -40,8 +47,7 @@ const validateGetCardActions = (args: unknown) => {
 
 const validateGetCardAttachments = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     cardId: trelloIdSchema,
     fields: z.array(z.string()).optional()
   });
@@ -51,8 +57,7 @@ const validateGetCardAttachments = (args: unknown) => {
 
 const validateCreateCardAttachment = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     cardId: trelloIdSchema,
     url: z.string().url().optional(),
     filePath: z.string().optional(),
@@ -68,8 +73,7 @@ const validateCreateCardAttachment = (args: unknown) => {
 
 const validateGetCardAttachment = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     cardId: trelloIdSchema,
     attachmentId: z.string().min(1, 'Attachment ID is required'),
     fields: z.array(z.string()).optional()
@@ -80,8 +84,7 @@ const validateGetCardAttachment = (args: unknown) => {
 
 const validateDeleteCardAttachment = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     cardId: trelloIdSchema,
     attachmentId: z.string().min(1, 'Attachment ID is required')
   });
@@ -91,8 +94,7 @@ const validateDeleteCardAttachment = (args: unknown) => {
 
 const validateGetCardChecklists = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     cardId: trelloIdSchema,
     checkItems: z.string().optional(),
     fields: z.array(z.string()).optional()
@@ -103,8 +105,7 @@ const validateGetCardChecklists = (args: unknown) => {
 
 const validateGetBoardMembers = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     boardId: trelloIdSchema
   });
 
@@ -113,8 +114,7 @@ const validateGetBoardMembers = (args: unknown) => {
 
 const validateGetBoardLabels = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     boardId: trelloIdSchema
   });
 
@@ -123,8 +123,7 @@ const validateGetBoardLabels = (args: unknown) => {
 
 const validateCreateLabel = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     boardId: trelloIdSchema,
     name: z.string().min(1, 'Label name is required').max(16384, 'Label name too long'),
     color: z.string().min(1, 'Color is required')
@@ -135,8 +134,7 @@ const validateCreateLabel = (args: unknown) => {
 
 const validateUpdateLabel = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     labelId: trelloIdSchema,
     name: z.string().min(1).max(16384).optional(),
     color: z.string().min(1).optional()
@@ -150,8 +148,7 @@ const validateUpdateLabel = (args: unknown) => {
 
 const validateAddLabelToCard = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     cardId: trelloIdSchema,
     labelId: trelloIdSchema
   });
@@ -161,8 +158,7 @@ const validateAddLabelToCard = (args: unknown) => {
 
 const validateRemoveLabelFromCard = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
+
     cardId: trelloIdSchema,
     labelId: trelloIdSchema
   });
@@ -178,11 +174,11 @@ export const trelloGetBoardCardsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       boardId: {
         type: 'string',
@@ -227,14 +223,15 @@ export const trelloGetBoardCardsTool: Tool = {
         default: true
       }
     },
-    required: ['apiKey', 'token', 'boardId']
+    required: ['boardId']
   }
 };
 
 export async function handleTrelloGetBoardCards(args: unknown) {
   try {
-    const { apiKey, token, boardId, attachments, members, filter, limit, descriptionMaxLength, compact } = validateGetBoardCards(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { boardId, attachments, members, filter, limit, descriptionMaxLength, compact} = validateGetBoardCards(params);
+    const client = new TrelloClient(credentials);
 
     // Default to 200 chars for descriptions and 50 cards limit
     const maxDescLen = descriptionMaxLength ?? 200;
@@ -301,7 +298,8 @@ export async function handleTrelloGetBoardCards(args: unknown) {
           url: attachment.url,
           mimeType: attachment.mimeType,
           date: attachment.date
-        })) || []
+        })) || [],
+        customFieldItems: card.customFieldItems || []
       })),
       rateLimit: response.rateLimit
     };
@@ -341,11 +339,11 @@ export const trelloGetCardActionsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       cardId: {
         type: 'string',
@@ -366,14 +364,15 @@ export const trelloGetCardActionsTool: Tool = {
         default: 50
       }
     },
-    required: ['apiKey', 'token', 'cardId']
+    required: ['cardId']
   }
 };
 
 export async function handleTrelloGetCardActions(args: unknown) {
   try {
-    const { apiKey, token, cardId, filter, limit } = validateGetCardActions(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, filter, limit} = validateGetCardActions(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.getCardActions(cardId, {
       ...(filter && { filter }),
@@ -444,11 +443,11 @@ export const trelloGetCardAttachmentsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       cardId: {
         type: 'string',
@@ -461,14 +460,15 @@ export const trelloGetCardAttachmentsTool: Tool = {
         description: 'Optional: specific fields to include (e.g., ["name", "url", "mimeType", "date"])'
       }
     },
-    required: ['apiKey', 'token', 'cardId']
+    required: ['cardId']
   }
 };
 
 export async function handleTrelloGetCardAttachments(args: unknown) {
   try {
-    const { apiKey, token, cardId, fields } = validateGetCardAttachments(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, fields} = validateGetCardAttachments(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.getCardAttachments(cardId, {
       ...(fields && { fields })
@@ -531,11 +531,11 @@ export const trelloGetCardChecklistsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       cardId: {
         type: 'string',
@@ -554,14 +554,15 @@ export const trelloGetCardChecklistsTool: Tool = {
         description: 'Optional: specific fields to include (e.g., ["name", "pos"])'
       }
     },
-    required: ['apiKey', 'token', 'cardId']
+    required: ['cardId']
   }
 };
 
 export async function handleTrelloGetCardChecklists(args: unknown) {
   try {
-    const { apiKey, token, cardId, checkItems, fields } = validateGetCardChecklists(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, checkItems, fields} = validateGetCardChecklists(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.getCardChecklists(cardId, {
       ...(checkItems && { checkItems }),
@@ -623,11 +624,11 @@ export const trelloGetBoardMembersTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       boardId: {
         type: 'string',
@@ -635,14 +636,15 @@ export const trelloGetBoardMembersTool: Tool = {
 
       }
     },
-    required: ['apiKey', 'token', 'boardId']
+    required: ['boardId']
   }
 };
 
 export async function handleTrelloGetBoardMembers(args: unknown) {
   try {
-    const { apiKey, token, boardId } = validateGetBoardMembers(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { boardId} = validateGetBoardMembers(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.getBoardMembers(boardId);
     const members = response.data;
@@ -697,11 +699,11 @@ export const trelloGetBoardLabelsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       boardId: {
         type: 'string',
@@ -709,14 +711,15 @@ export const trelloGetBoardLabelsTool: Tool = {
 
       }
     },
-    required: ['apiKey', 'token', 'boardId']
+    required: ['boardId']
   }
 };
 
 export async function handleTrelloGetBoardLabels(args: unknown) {
   try {
-    const { apiKey, token, boardId } = validateGetBoardLabels(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { boardId} = validateGetBoardLabels(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.getBoardLabels(boardId);
     const labels = response.data;
@@ -768,11 +771,11 @@ export const trelloCreateLabelTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       boardId: {
         type: 'string',
@@ -789,14 +792,15 @@ export const trelloCreateLabelTool: Tool = {
         description: 'Color of the label (e.g., green, yellow, orange, red, purple, blue, sky, lime, pink, black)'
       }
     },
-    required: ['apiKey', 'token', 'boardId', 'name', 'color']
+    required: ['boardId', 'name', 'color']
   }
 };
 
 export async function handleTrelloCreateLabel(args: unknown) {
   try {
-    const { apiKey, token, boardId, name, color } = validateCreateLabel(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { boardId, name, color} = validateCreateLabel(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.createLabel(boardId, name, color);
     const label = response.data;
@@ -848,11 +852,11 @@ export const trelloUpdateLabelTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       labelId: {
         type: 'string',
@@ -869,14 +873,15 @@ export const trelloUpdateLabelTool: Tool = {
         description: 'New color for the label'
       }
     },
-    required: ['apiKey', 'token', 'labelId']
+    required: ['labelId']
   }
 };
 
 export async function handleTrelloUpdateLabel(args: unknown) {
   try {
-    const { apiKey, token, labelId, name, color } = validateUpdateLabel(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { labelId, name, color} = validateUpdateLabel(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.updateLabel(labelId, { ...(name && { name }), ...(color && { color }) });
     const label = response.data;
@@ -928,11 +933,11 @@ export const trelloAddLabelToCardTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       cardId: {
         type: 'string',
@@ -945,14 +950,15 @@ export const trelloAddLabelToCardTool: Tool = {
 
       }
     },
-    required: ['apiKey', 'token', 'cardId', 'labelId']
+    required: ['cardId', 'labelId']
   }
 };
 
 export async function handleTrelloAddLabelToCard(args: unknown) {
   try {
-    const { apiKey, token, cardId, labelId } = validateAddLabelToCard(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, labelId} = validateAddLabelToCard(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.addLabelToCard(cardId, labelId);
 
@@ -998,11 +1004,11 @@ export const trelloRemoveLabelFromCardTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       cardId: {
         type: 'string',
@@ -1015,14 +1021,15 @@ export const trelloRemoveLabelFromCardTool: Tool = {
 
       }
     },
-    required: ['apiKey', 'token', 'cardId', 'labelId']
+    required: ['cardId', 'labelId']
   }
 };
 
 export async function handleTrelloRemoveLabelFromCard(args: unknown) {
   try {
-    const { apiKey, token, cardId, labelId } = validateRemoveLabelFromCard(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, labelId} = validateRemoveLabelFromCard(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.removeLabelFromCard(cardId, labelId);
 
@@ -1070,11 +1077,11 @@ export const trelloCreateCardAttachmentTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       cardId: {
         type: 'string',
@@ -1101,14 +1108,15 @@ export const trelloCreateCardAttachmentTool: Tool = {
         description: 'If true, set this attachment as the card cover image'
       }
     },
-    required: ['apiKey', 'token', 'cardId']
+    required: ['cardId']
   }
 };
 
 export async function handleTrelloCreateCardAttachment(args: unknown) {
   try {
-    const { apiKey, token, cardId, url, filePath, name, mimeType, setCover } = validateCreateCardAttachment(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, url, filePath, name, mimeType, setCover} = validateCreateCardAttachment(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.createCardAttachment(cardId, {
       ...(url && { url }),
@@ -1171,11 +1179,11 @@ export const trelloGetCardAttachmentTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       cardId: {
         type: 'string',
@@ -1191,14 +1199,15 @@ export const trelloGetCardAttachmentTool: Tool = {
         description: 'Optional: specific fields to include (e.g., ["name", "url", "mimeType", "date"])'
       }
     },
-    required: ['apiKey', 'token', 'cardId', 'attachmentId']
+    required: ['cardId', 'attachmentId']
   }
 };
 
 export async function handleTrelloGetCardAttachment(args: unknown) {
   try {
-    const { apiKey, token, cardId, attachmentId, fields } = validateGetCardAttachment(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, attachmentId, fields} = validateGetCardAttachment(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.getCardAttachment(cardId, attachmentId, {
       ...(fields && { fields })
@@ -1263,11 +1272,11 @@ export const trelloDeleteCardAttachmentTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       cardId: {
         type: 'string',
@@ -1278,14 +1287,15 @@ export const trelloDeleteCardAttachmentTool: Tool = {
         description: 'ID of the attachment to delete'
       }
     },
-    required: ['apiKey', 'token', 'cardId', 'attachmentId']
+    required: ['cardId', 'attachmentId']
   }
 };
 
 export async function handleTrelloDeleteCardAttachment(args: unknown) {
   try {
-    const { apiKey, token, cardId, attachmentId } = validateDeleteCardAttachment(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, attachmentId} = validateDeleteCardAttachment(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.deleteCardAttachment(cardId, attachmentId);
 
@@ -1316,6 +1326,318 @@ export async function handleTrelloDeleteCardAttachment(args: unknown) {
         {
           type: 'text' as const,
           text: `Error deleting attachment: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+export const trelloGetBoardCustomFieldsTool: Tool = {
+  name: 'trello_get_board_custom_fields',
+  description: 'Get all custom field definitions for a Trello board. Returns field names, types, and options.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      apiKey: {
+        type: 'string',
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
+      },
+      token: {
+        type: 'string',
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
+      },
+      boardId: {
+        type: 'string',
+        description: 'ID or URL of the board to get custom fields from'
+      }
+    },
+    required: ['boardId']
+  }
+};
+
+export async function handleTrelloGetBoardCustomFields(args: unknown) {
+  try {
+    const { credentials, params } = extractCredentials(args);
+    const { boardId} = validateGetBoardCustomFields(params);
+    const client = new TrelloClient(credentials);
+
+    const response = await client.getBoardCustomFields(boardId);
+    const fields = response.data;
+
+    const result = {
+      summary: `Found ${fields.length} custom field(s) on board`,
+      boardId,
+      customFields: fields.map(field => ({
+        id: field.id,
+        name: field.name,
+        type: field.type,
+        position: field.pos,
+        options: field.options?.map(opt => ({
+          id: opt.id,
+          value: opt.value.text,
+          color: opt.color,
+          position: opt.pos
+        })) || []
+      })),
+      rateLimit: response.rateLimit
+    };
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  } catch (error) {
+    const errorMessage = error instanceof z.ZodError
+      ? formatValidationError(error)
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error occurred';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error getting board custom fields: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+// Card member management tools
+
+const validateAddMemberToCard = (args: unknown) => {
+  const schema = z.object({
+
+    cardId: trelloIdSchema,
+    memberId: trelloIdSchema
+  });
+  return schema.parse(args);
+};
+
+const validateRemoveMemberFromCard = (args: unknown) => {
+  const schema = z.object({
+
+    cardId: trelloIdSchema,
+    memberId: trelloIdSchema
+  });
+  return schema.parse(args);
+};
+
+const validateDeleteLabel = (args: unknown) => {
+  const schema = z.object({
+
+    labelId: trelloIdSchema
+  });
+  return schema.parse(args);
+};
+
+export const trelloAddMemberToCardTool: Tool = {
+  name: 'trello_add_member_to_card',
+  description: 'Add a member to a Trello card.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      apiKey: {
+        type: 'string',
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
+      },
+      token: {
+        type: 'string',
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
+      },
+      cardId: {
+        type: 'string',
+        description: 'ID or URL of the card'
+      },
+      memberId: {
+        type: 'string',
+        description: 'ID of the member to add to the card'
+      }
+    },
+    required: ['cardId', 'memberId']
+  }
+};
+
+export async function handleTrelloAddMemberToCard(args: unknown) {
+  try {
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, memberId} = validateAddMemberToCard(params);
+    const client = new TrelloClient(credentials);
+
+    const response = await client.addMemberToCard(cardId, memberId);
+    const members = response.data;
+
+    const result = {
+      summary: `Added member ${memberId} to card ${cardId}`,
+      cardId,
+      members: members.map((member: any) => ({
+        id: member.id,
+        fullName: member.fullName,
+        username: member.username
+      })),
+      rateLimit: response.rateLimit
+    };
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  } catch (error) {
+    const errorMessage = error instanceof z.ZodError
+      ? formatValidationError(error)
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error occurred';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error adding member to card: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+export const trelloRemoveMemberFromCardTool: Tool = {
+  name: 'trello_remove_member_from_card',
+  description: 'Remove a member from a Trello card.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      apiKey: {
+        type: 'string',
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
+      },
+      token: {
+        type: 'string',
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
+      },
+      cardId: {
+        type: 'string',
+        description: 'ID or URL of the card'
+      },
+      memberId: {
+        type: 'string',
+        description: 'ID of the member to remove from the card'
+      }
+    },
+    required: ['cardId', 'memberId']
+  }
+};
+
+export async function handleTrelloRemoveMemberFromCard(args: unknown) {
+  try {
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, memberId} = validateRemoveMemberFromCard(params);
+    const client = new TrelloClient(credentials);
+
+    const response = await client.removeMemberFromCard(cardId, memberId);
+
+    const result = {
+      summary: `Removed member ${memberId} from card ${cardId}`,
+      cardId,
+      memberId,
+      rateLimit: response.rateLimit
+    };
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  } catch (error) {
+    const errorMessage = error instanceof z.ZodError
+      ? formatValidationError(error)
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error occurred';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error removing member from card: ${errorMessage}`
+        }
+      ],
+      isError: true
+    };
+  }
+}
+
+export const trelloDeleteLabelTool: Tool = {
+  name: 'trello_delete_label',
+  description: 'Delete a label from a Trello board.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      apiKey: {
+        type: 'string',
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
+      },
+      token: {
+        type: 'string',
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
+      },
+      labelId: {
+        type: 'string',
+        description: 'ID of the label to delete'
+      }
+    },
+    required: ['labelId']
+  }
+};
+
+export async function handleTrelloDeleteLabel(args: unknown) {
+  try {
+    const { credentials, params } = extractCredentials(args);
+    const { labelId} = validateDeleteLabel(params);
+    const client = new TrelloClient(credentials);
+
+    const response = await client.deleteLabel(labelId);
+
+    const result = {
+      summary: `Deleted label ${labelId}`,
+      labelId,
+      rateLimit: response.rateLimit
+    };
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(result, null, 2)
+        }
+      ]
+    };
+  } catch (error) {
+    const errorMessage = error instanceof z.ZodError
+      ? formatValidationError(error)
+      : error instanceof Error
+        ? error.message
+        : 'Unknown error occurred';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error deleting label: ${errorMessage}`
         }
       ],
       isError: true

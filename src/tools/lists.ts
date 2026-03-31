@@ -1,12 +1,10 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
-import { formatValidationError, trelloIdSchema } from '../utils/validation.js';
+import { formatValidationError, trelloIdSchema, extractCredentials } from '../utils/validation.js';
 
 const validateGetListCards = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
     listId: trelloIdSchema,
     filter: z.enum(['all', 'open', 'closed']).optional(),
     fields: z.array(z.string()).optional(),
@@ -18,8 +16,6 @@ const validateGetListCards = (args: unknown) => {
 
 const validateCreateList = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
     name: z.string().min(1, 'List name is required'),
     idBoard: trelloIdSchema,
     pos: z.union([z.number().min(0), z.enum(['top', 'bottom'])]).optional()
@@ -30,8 +26,6 @@ const validateCreateList = (args: unknown) => {
 
 const validateAddComment = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
     cardId: trelloIdSchema,
     text: z.string().min(1, 'Comment text is required')
   });
@@ -47,11 +41,11 @@ export const trelloGetListCardsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       listId: {
         type: 'string',
@@ -74,14 +68,15 @@ export const trelloGetListCardsTool: Tool = {
         default: true
       }
     },
-    required: ['apiKey', 'token', 'listId']
+    required: ['listId']
   }
 };
 
 export async function handleTrelloGetListCards(args: unknown) {
   try {
-    const { apiKey, token, listId, filter, fields, compact } = validateGetListCards(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { listId, filter, fields, compact } = validateGetListCards(params);
+    const client = new TrelloClient(credentials);
 
     // Default to compact mode for smaller responses
     const useCompact = compact ?? true;
@@ -166,11 +161,11 @@ export const trelloCreateListTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       name: {
         type: 'string',
@@ -190,16 +185,16 @@ export const trelloCreateListTool: Tool = {
         default: 'bottom'
       }
     },
-    required: ['apiKey', 'token', 'name', 'idBoard']
+    required: ['name', 'idBoard']
   }
 };
 
 export async function handleTrelloCreateList(args: unknown) {
   try {
-    const listData = validateCreateList(args);
-    const { apiKey, token, ...createData } = listData;
-    
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const createData = validateCreateList(params);
+
+    const client = new TrelloClient(credentials);
     const response = await client.createList({
       name: createData.name,
       idBoard: createData.idBoard,
@@ -255,11 +250,11 @@ export const trelloAddCommentTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       cardId: {
         type: 'string',
@@ -271,14 +266,15 @@ export const trelloAddCommentTool: Tool = {
         minLength: 1
       }
     },
-    required: ['apiKey', 'token', 'cardId', 'text']
+    required: ['cardId', 'text']
   }
 };
 
 export async function handleTrelloAddComment(args: unknown) {
   try {
-    const { apiKey, token, cardId, text } = validateAddComment(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { cardId, text } = validateAddComment(params);
+    const client = new TrelloClient(credentials);
     
     const response = await client.addCommentToCard(cardId, text);
     const comment = response.data;

@@ -1,28 +1,24 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { TrelloClient } from '../trello/client.js';
-import { formatValidationError } from '../utils/validation.js';
+import { formatValidationError, extractCredentials } from '../utils/validation.js';
 
 const validateGetUserBoards = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
     filter: z.enum(['all', 'open', 'closed']).optional()
   });
-  
+
   return schema.parse(args);
 };
 
 const validateGetMember = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
     memberId: z.string().min(1, 'Member ID is required'),
     fields: z.array(z.string()).optional(),
     boards: z.string().optional(),
     organizations: z.string().optional()
   });
-  
+
   return schema.parse(args);
 };
 
@@ -34,11 +30,11 @@ export const trelloGetUserBoardsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       filter: {
         type: 'string',
@@ -47,14 +43,15 @@ export const trelloGetUserBoardsTool: Tool = {
         default: 'open'
       }
     },
-    required: ['apiKey', 'token']
+    required: []
   }
 };
 
 export async function handleTrelloGetUserBoards(args: unknown) {
   try {
-    const { apiKey, token, filter } = validateGetUserBoards(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { filter } = validateGetUserBoards(params);
+    const client = new TrelloClient(credentials);
     
     const response = await client.getCurrentUser();
     const user = response.data;
@@ -127,11 +124,11 @@ export const trelloGetMemberTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       memberId: {
         type: 'string',
@@ -156,14 +153,15 @@ export const trelloGetMemberTool: Tool = {
         default: 'all'
       }
     },
-    required: ['apiKey', 'token', 'memberId']
+    required: ['memberId']
   }
 };
 
 export async function handleTrelloGetMember(args: unknown) {
   try {
-    const { apiKey, token, memberId, fields, boards, organizations } = validateGetMember(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { memberId, fields, boards, organizations } = validateGetMember(params);
+    const client = new TrelloClient(credentials);
     
     const response = await client.getMember(memberId, {
       ...(fields && { fields }),

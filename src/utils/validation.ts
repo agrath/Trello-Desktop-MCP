@@ -30,15 +30,31 @@ export const credentialsSchema = z.object({
   token: z.string().min(1, 'Token is required')
 });
 
+type ArgumentRecord = Record<string, unknown>;
+
+export function extractCredentials(args: unknown): { credentials: { apiKey: string; token: string }; params: ArgumentRecord } {
+  if (args !== undefined && args !== null && typeof args !== 'object') {
+    throw new Error('Tool arguments must be an object.');
+  }
+
+  const { apiKey: argApiKey, token: argToken, ...rest } = (args as ArgumentRecord) ?? {};
+
+  const credentials = credentialsSchema.parse({
+    apiKey: argApiKey ?? process.env.TRELLO_API_KEY,
+    token: argToken ?? process.env.TRELLO_TOKEN
+  });
+
+  return {
+    credentials,
+    params: rest
+  };
+}
+
 export const listBoardsSchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
-  token: z.string().min(1, 'Token is required'),
   filter: z.enum(['all', 'open', 'closed']).optional().default('open')
 });
 
 export const getBoardSchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
-  token: z.string().min(1, 'Token is required'),
   boardId: trelloIdSchema,
   includeDetails: z.boolean().optional().default(false),
   descriptionMaxLength: z.number().min(0).max(10000).optional(),
@@ -46,15 +62,11 @@ export const getBoardSchema = z.object({
 });
 
 export const getBoardListsSchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
-  token: z.string().min(1, 'Token is required'),
   boardId: trelloIdSchema,
   filter: z.enum(['all', 'open', 'closed']).optional().default('open')
 });
 
 export const createCardSchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
-  token: z.string().min(1, 'Token is required'),
   name: z.string().min(1, 'Card name is required').max(16384, 'Card name too long'),
   desc: z.string().max(16384, 'Description too long').optional(),
   idList: trelloIdSchema,
@@ -65,8 +77,6 @@ export const createCardSchema = z.object({
 });
 
 export const updateCardSchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
-  token: z.string().min(1, 'Token is required'),
   cardId: trelloIdSchema,
   name: z.string().min(1).max(16384).optional(),
   desc: z.string().max(16384).optional(),
@@ -80,23 +90,17 @@ export const updateCardSchema = z.object({
 });
 
 export const moveCardSchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
-  token: z.string().min(1, 'Token is required'),
   cardId: trelloIdSchema,
   idList: trelloIdSchema,
   pos: z.union([z.number().min(0), z.enum(['top', 'bottom'])]).optional()
 });
 
 export const getCardSchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
-  token: z.string().min(1, 'Token is required'),
   cardId: trelloIdSchema,
   includeDetails: z.boolean().optional().default(false)
 });
 
 export const deleteCardSchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
-  token: z.string().min(1, 'Token is required'),
   cardId: trelloIdSchema
 });
 

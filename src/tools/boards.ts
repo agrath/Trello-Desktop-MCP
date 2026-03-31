@@ -6,7 +6,8 @@ import {
   validateGetBoard,
   validateGetBoardLists,
   formatValidationError,
-  trelloIdSchema
+  trelloIdSchema,
+  extractCredentials
 } from '../utils/validation.js';
 
 export const listBoardsTool: Tool = {
@@ -17,11 +18,11 @@ export const listBoardsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       filter: {
         type: 'string',
@@ -30,14 +31,15 @@ export const listBoardsTool: Tool = {
         default: 'open'
       }
     },
-    required: ['apiKey', 'token']
+    required: []
   }
 };
 
 export async function handleListBoards(args: unknown) {
   try {
-    const { apiKey, token, filter } = validateListBoards(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { filter } = validateListBoards(params);
+    const client = new TrelloClient(credentials);
     
     const response = await client.getMyBoards(filter);
     const boards = response.data;
@@ -91,11 +93,11 @@ export const getBoardDetailsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       boardId: {
         type: 'string',
@@ -119,7 +121,7 @@ export const getBoardDetailsTool: Tool = {
         default: true
       }
     },
-    required: ['apiKey', 'token', 'boardId']
+    required: ['boardId']
   }
 };
 
@@ -132,8 +134,9 @@ function truncateText(text: string | undefined | null, maxLength: number): strin
 
 export async function handleGetBoardDetails(args: unknown) {
   try {
-    const { apiKey, token, boardId, includeDetails, descriptionMaxLength, compact } = validateGetBoard(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { boardId, includeDetails, descriptionMaxLength, compact } = validateGetBoard(params);
+    const client = new TrelloClient(credentials);
 
     const maxDescLen = descriptionMaxLength ?? 200;
     const useCompact = compact ?? true;
@@ -218,11 +221,11 @@ export const getListsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       boardId: {
         type: 'string',
@@ -235,14 +238,15 @@ export const getListsTool: Tool = {
         default: 'open'
       }
     },
-    required: ['apiKey', 'token', 'boardId']
+    required: ['boardId']
   }
 };
 
 export async function handleGetLists(args: unknown) {
   try {
-    const { apiKey, token, boardId, filter } = validateGetBoardLists(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { boardId, filter } = validateGetBoardLists(params);
+    const client = new TrelloClient(credentials);
     
     const response = await client.getBoardLists(boardId, filter);
     const lists = response.data;
@@ -289,8 +293,6 @@ export async function handleGetLists(args: unknown) {
 
 const validateFilterLists = (args: unknown) => {
   const schema = z.object({
-    apiKey: z.string().min(1, 'API key is required'),
-    token: z.string().min(1, 'Token is required'),
     boardId: trelloIdSchema,
     filter: z.string().min(1, 'Filter string is required')
   });
@@ -305,11 +307,11 @@ export const trelloFilterListsTool: Tool = {
     properties: {
       apiKey: {
         type: 'string',
-        description: 'Trello API key (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API key (optional if TRELLO_API_KEY env var is set)'
       },
       token: {
         type: 'string',
-        description: 'Trello API token (automatically provided by Claude.app from your stored credentials)'
+        description: 'Trello API token (optional if TRELLO_TOKEN env var is set)'
       },
       boardId: {
         type: 'string',
@@ -320,14 +322,15 @@ export const trelloFilterListsTool: Tool = {
         description: 'Search string to filter lists by name (case-insensitive)'
       }
     },
-    required: ['apiKey', 'token', 'boardId', 'filter']
+    required: ['boardId', 'filter']
   }
 };
 
 export async function handleTrelloFilterLists(args: unknown) {
   try {
-    const { apiKey, token, boardId, filter } = validateFilterLists(args);
-    const client = new TrelloClient({ apiKey, token });
+    const { credentials, params } = extractCredentials(args);
+    const { boardId, filter } = validateFilterLists(params);
+    const client = new TrelloClient(credentials);
 
     const response = await client.getBoardLists(boardId);
     const allLists = response.data;

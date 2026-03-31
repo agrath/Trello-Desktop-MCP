@@ -9,7 +9,8 @@ const validateGetListCards = (args: unknown) => {
     token: z.string().min(1, 'Token is required'),
     listId: trelloIdSchema,
     filter: z.enum(['all', 'open', 'closed']).optional(),
-    fields: z.array(z.string()).optional()
+    fields: z.array(z.string()).optional(),
+    compact: z.boolean().optional()
   });
 
   return schema.parse(args);
@@ -66,6 +67,11 @@ export const trelloGetListCardsTool: Tool = {
         type: 'array',
         items: { type: 'string' },
         description: 'Optional: specific fields to include (e.g., ["name", "desc", "due", "labels", "members"])'
+      },
+      compact: {
+        type: 'boolean',
+        description: 'Return minimal fields only (id, name, url, listId). Default: true. Set to false for full details.',
+        default: true
       }
     },
     required: ['apiKey', 'token', 'listId']
@@ -74,16 +80,29 @@ export const trelloGetListCardsTool: Tool = {
 
 export async function handleTrelloGetListCards(args: unknown) {
   try {
-    const { apiKey, token, listId, filter, fields } = validateGetListCards(args);
+    const { apiKey, token, listId, filter, fields, compact } = validateGetListCards(args);
     const client = new TrelloClient({ apiKey, token });
-    
-    const response = await client.getListCards(listId, { 
+
+    // Default to compact mode for smaller responses
+    const useCompact = compact ?? true;
+
+    const response = await client.getListCards(listId, {
       ...(filter && { filter }),
       ...(fields && { fields })
     });
     const cards = response.data;
-    
-    const result = {
+
+    const result = useCompact ? {
+      summary: `Found ${cards.length} ${filter || 'open'} card(s) in list`,
+      listId,
+      cards: cards.map(card => ({
+        id: card.id,
+        name: card.name,
+        url: card.shortUrl,
+        listId: card.idList
+      })),
+      rateLimit: response.rateLimit
+    } : {
       summary: `Found ${cards.length} ${filter || 'open'} card(s) in list`,
       listId,
       cards: cards.map(card => ({

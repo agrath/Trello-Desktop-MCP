@@ -67,11 +67,11 @@ export async function handleTrelloGetUserBoards(args: unknown) {
         memberType: user.memberType,
         confirmed: user.confirmed
       },
-      boards: user.boards?.filter((board: any) => {
+      boards: user.boards?.filter(board => {
         if (filter === 'all') return true;
         if (filter === 'closed') return board.closed;
         return !board.closed; // 'open' or default
-      }).map((board: any) => ({
+      }).map(board => ({
         id: board.id,
         name: board.name,
         description: board.desc || 'No description',
@@ -80,7 +80,7 @@ export async function handleTrelloGetUserBoards(args: unknown) {
         lastActivity: board.dateLastActivity,
         permissions: board.prefs?.permissionLevel || 'unknown'
       })) || [],
-      organizations: user.organizations?.map((org: any) => ({
+      organizations: user.organizations?.map(org => ({
         id: org.id,
         name: org.name,
         displayName: org.displayName,
@@ -183,7 +183,7 @@ export async function handleTrelloGetMember(args: unknown) {
         avatarUrl: member.avatarUrl,
         initials: member.initials
       },
-      boards: member.boards?.map((board: any) => ({
+      boards: member.boards?.map(board => ({
         id: board.id,
         name: board.name,
         description: board.desc || 'No description',
@@ -191,7 +191,7 @@ export async function handleTrelloGetMember(args: unknown) {
         closed: board.closed,
         lastActivity: board.dateLastActivity
       })) || [],
-      organizations: member.organizations?.map((org: any) => ({
+      organizations: member.organizations?.map(org => ({
         id: org.id,
         name: org.name,
         displayName: org.displayName,

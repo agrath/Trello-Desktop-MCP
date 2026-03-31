@@ -292,7 +292,7 @@ export async function handleTrelloGetBoardCards(args: unknown) {
           fullName: member.fullName,
           username: member.username
         })) || [],
-        attachments: card.attachments?.map((attachment: any) => ({
+        attachments: card.attachments?.map(attachment => ({
           id: attachment.id,
           name: attachment.name,
           url: attachment.url,
@@ -486,7 +486,7 @@ export async function handleTrelloGetCardAttachments(args: unknown) {
         date: attachment.date,
         bytes: attachment.bytes,
         isUpload: attachment.isUpload,
-        previews: attachment.previews?.map((preview: any) => ({
+        previews: attachment.previews?.map(preview => ({
           id: preview.id,
           width: preview.width,
           height: preview.height,
@@ -1227,7 +1227,7 @@ export async function handleTrelloGetCardAttachment(args: unknown) {
         isUpload: attachment.isUpload,
         pos: attachment.pos,
         edgeColor: attachment.edgeColor,
-        previews: attachment.previews?.map((preview: any) => ({
+        previews: attachment.previews?.map(preview => ({
           id: preview.id,
           width: preview.width,
           height: preview.height,

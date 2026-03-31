@@ -83,6 +83,12 @@ export interface TrelloMember {
   avatarHash: string | null;
   avatarUrl: string | null;
   initials: string;
+  bio?: string;
+  url?: string;
+  memberType?: string;
+  confirmed?: boolean;
+  boards?: TrelloBoard[];
+  organizations?: { id: string; name: string; displayName: string; desc?: string }[];
 }
 
 export interface TrelloChecklist {
@@ -111,6 +117,8 @@ export interface TrelloAttachment {
   date: string;
   bytes: number;
   isUpload: boolean;
+  pos?: number;
+  edgeColor?: string | null;
   previews?: {
     id: string;
     width: number;
@@ -227,10 +235,6 @@ export interface TrelloCustomFieldItem {
 
 export interface TrelloUser extends TrelloMember {
   email?: string;
-  bio?: string;
-  url?: string;
-  memberType?: string;
-  confirmed?: boolean;
 }
 
 export interface TrelloAction {

@@ -7,8 +7,15 @@ import type {
   TrelloBoard,
   TrelloList,
   TrelloCard,
+  TrelloLabel,
   TrelloChecklist,
   TrelloCheckItem,
+  TrelloAttachment,
+  TrelloMember,
+  TrelloUser,
+  TrelloAction,
+  TrelloComment,
+  TrelloSearchResults,
   CreateCardRequest,
   UpdateCardRequest,
   MoveCardRequest,
@@ -392,16 +399,16 @@ export class TrelloClient {
     );
   }
 
-  async getBoardMembers(boardId: string): Promise<TrelloApiResponse<any[]>> {
-    return this.makeRequest<any[]>(
+  async getBoardMembers(boardId: string): Promise<TrelloApiResponse<TrelloMember[]>> {
+    return this.makeRequest<TrelloMember[]>(
       `/boards/${boardId}/members`,
       {},
       `Get board ${boardId} members`
     );
   }
 
-  async getBoardLabels(boardId: string): Promise<TrelloApiResponse<any[]>> {
-    return this.makeRequest<any[]>(
+  async getBoardLabels(boardId: string): Promise<TrelloApiResponse<TrelloLabel[]>> {
+    return this.makeRequest<TrelloLabel[]>(
       `/boards/${boardId}/labels`,
       {},
       `Get board ${boardId} labels`
@@ -414,11 +421,11 @@ export class TrelloClient {
     boardsLimit?: number;
     cardsLimit?: number;
     membersLimit?: number;
-  }): Promise<TrelloApiResponse<any>> {
+  }): Promise<TrelloApiResponse<TrelloSearchResults>> {
     const params: Record<string, string> = {
       query: encodeURIComponent(query)
     };
-    
+
     if (options?.modelTypes) {
       params.modelTypes = options.modelTypes.join(',');
     }
@@ -434,8 +441,8 @@ export class TrelloClient {
     if (options?.membersLimit) {
       params.members_limit = options.membersLimit.toString();
     }
-    
-    return this.makeRequest<any>(
+
+    return this.makeRequest<TrelloSearchResults>(
       '/search',
       { params },
       `Search for "${query}"`
@@ -462,8 +469,8 @@ export class TrelloClient {
     );
   }
 
-  async addCommentToCard(cardId: string, text: string): Promise<TrelloApiResponse<any>> {
-    return this.makeRequest<any>(
+  async addCommentToCard(cardId: string, text: string): Promise<TrelloApiResponse<TrelloComment>> {
+    return this.makeRequest<TrelloComment>(
       `/cards/${cardId}/actions/comments`,
       {
         method: 'POST',
@@ -492,9 +499,9 @@ export class TrelloClient {
     fields?: string[];
     boards?: string;
     organizations?: string;
-  }): Promise<TrelloApiResponse<any>> {
+  }): Promise<TrelloApiResponse<TrelloMember>> {
     const params: Record<string, string> = {};
-    
+
     if (options?.fields) {
       params.fields = options.fields.join(',');
     }
@@ -504,16 +511,16 @@ export class TrelloClient {
     if (options?.organizations) {
       params.organizations = options.organizations;
     }
-    
-    return this.makeRequest<any>(
+
+    return this.makeRequest<TrelloMember>(
       `/members/${memberId}`,
       { params },
       `Get member ${memberId}`
     );
   }
 
-  async getCurrentUser(): Promise<TrelloApiResponse<any>> {
-    return this.makeRequest<any>(
+  async getCurrentUser(): Promise<TrelloApiResponse<TrelloUser>> {
+    return this.makeRequest<TrelloUser>(
       '/members/me',
       { params: { boards: 'open', organizations: 'all' } },
       'Get current user'
@@ -561,17 +568,17 @@ export class TrelloClient {
   async getCardActions(cardId: string, options?: {
     filter?: string;
     limit?: number;
-  }): Promise<TrelloApiResponse<any[]>> {
+  }): Promise<TrelloApiResponse<TrelloAction[]>> {
     const params: Record<string, string> = {};
-    
+
     if (options?.filter) {
       params.filter = options.filter;
     }
     if (options?.limit) {
       params.limit = options.limit.toString();
     }
-    
-    return this.makeRequest<any[]>(
+
+    return this.makeRequest<TrelloAction[]>(
       `/cards/${cardId}/actions`,
       { params },
       `Get actions for card ${cardId}`
@@ -580,14 +587,14 @@ export class TrelloClient {
 
   async getCardAttachments(cardId: string, options?: {
     fields?: string[];
-  }): Promise<TrelloApiResponse<any[]>> {
+  }): Promise<TrelloApiResponse<TrelloAttachment[]>> {
     const params: Record<string, string> = {};
-    
+
     if (options?.fields) {
       params.fields = options.fields.join(',');
     }
-    
-    return this.makeRequest<any[]>(
+
+    return this.makeRequest<TrelloAttachment[]>(
       `/cards/${cardId}/attachments`,
       { params },
       `Get attachments for card ${cardId}`
@@ -600,7 +607,7 @@ export class TrelloClient {
     name?: string;
     mimeType?: string;
     setCover?: boolean;
-  }): Promise<TrelloApiResponse<any>> {
+  }): Promise<TrelloApiResponse<TrelloAttachment>> {
     if (data.filePath) {
       // File upload via multipart/form-data
       const fileBuffer = await readFile(data.filePath);
@@ -613,7 +620,7 @@ export class TrelloClient {
       if (data.mimeType) formData.append('mimeType', data.mimeType);
       if (data.setCover !== undefined) formData.append('setCover', String(data.setCover));
 
-      return this.makeRequest<any>(
+      return this.makeRequest<TrelloAttachment>(
         `/cards/${cardId}/attachments`,
         {
           method: 'POST',
@@ -630,7 +637,7 @@ export class TrelloClient {
     if (data.mimeType) body.mimeType = data.mimeType;
     if (data.setCover !== undefined) body.setCover = data.setCover;
 
-    return this.makeRequest<any>(
+    return this.makeRequest<TrelloAttachment>(
       `/cards/${cardId}/attachments`,
       {
         method: 'POST',
@@ -642,14 +649,14 @@ export class TrelloClient {
 
   async getCardAttachment(cardId: string, attachmentId: string, options?: {
     fields?: string[];
-  }): Promise<TrelloApiResponse<any>> {
+  }): Promise<TrelloApiResponse<TrelloAttachment>> {
     const params: Record<string, string> = {};
 
     if (options?.fields) {
       params.fields = options.fields.join(',');
     }
 
-    return this.makeRequest<any>(
+    return this.makeRequest<TrelloAttachment>(
       `/cards/${cardId}/attachments/${attachmentId}`,
       { params },
       `Get attachment ${attachmentId} for card ${cardId}`
@@ -667,7 +674,7 @@ export class TrelloClient {
   async getCardChecklists(cardId: string, options?: {
     checkItems?: string;
     fields?: string[];
-  }): Promise<TrelloApiResponse<any[]>> {
+  }): Promise<TrelloApiResponse<TrelloChecklist[]>> {
     const params: Record<string, string> = {};
 
     if (options?.checkItems) {
@@ -677,15 +684,15 @@ export class TrelloClient {
       params.fields = options.fields.join(',');
     }
 
-    return this.makeRequest<any[]>(
+    return this.makeRequest<TrelloChecklist[]>(
       `/cards/${cardId}/checklists`,
       { params },
       `Get checklists for card ${cardId}`
     );
   }
 
-  async createLabel(boardId: string, name: string, color: string): Promise<TrelloApiResponse<any>> {
-    return this.makeRequest<any>(
+  async createLabel(boardId: string, name: string, color: string): Promise<TrelloApiResponse<TrelloLabel>> {
+    return this.makeRequest<TrelloLabel>(
       `/boards/${boardId}/labels`,
       {
         method: 'POST',
@@ -695,8 +702,8 @@ export class TrelloClient {
     );
   }
 
-  async updateLabel(labelId: string, updates: { name?: string; color?: string }): Promise<TrelloApiResponse<any>> {
-    return this.makeRequest<any>(
+  async updateLabel(labelId: string, updates: { name?: string; color?: string }): Promise<TrelloApiResponse<TrelloLabel>> {
+    return this.makeRequest<TrelloLabel>(
       `/labels/${labelId}`,
       {
         method: 'PUT',
@@ -796,16 +803,16 @@ export class TrelloClient {
     );
   }
 
-  async getChecklistField(checklistId: string, field: string): Promise<TrelloApiResponse<any>> {
-    return this.makeRequest<any>(
+  async getChecklistField(checklistId: string, field: string): Promise<TrelloApiResponse<Record<string, string>>> {
+    return this.makeRequest<Record<string, string>>(
       `/checklists/${checklistId}/${field}`,
       {},
       `Get checklist ${checklistId} field ${field}`
     );
   }
 
-  async updateChecklistField(checklistId: string, field: string, value: string): Promise<TrelloApiResponse<any>> {
-    return this.makeRequest<any>(
+  async updateChecklistField(checklistId: string, field: string, value: string): Promise<TrelloApiResponse<Record<string, string>>> {
+    return this.makeRequest<Record<string, string>>(
       `/checklists/${checklistId}/${field}`,
       {
         method: 'PUT',

@@ -195,9 +195,17 @@ export async function handleTrelloCreateList(args: unknown) {
     const createData = validateCreateList(params);
 
     const client = new TrelloClient(credentials);
+
+    // Resolve short board ID to full hex ID (POST bodies require full IDs)
+    let boardId = createData.idBoard;
+    if (!/^[a-f0-9]{24}$/i.test(boardId)) {
+      const boardResponse = await client.getBoard(boardId);
+      boardId = boardResponse.data.id;
+    }
+
     const response = await client.createList({
       name: createData.name,
-      idBoard: createData.idBoard,
+      idBoard: boardId,
       ...(createData.pos !== undefined && { pos: createData.pos })
     });
     const list = response.data;

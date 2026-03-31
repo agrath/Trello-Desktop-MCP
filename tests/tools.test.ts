@@ -24,6 +24,8 @@ const mockGetCard = jest.fn();
 const mockGetListCards = jest.fn();
 const mockGetBoardLists = jest.fn();
 const mockUpdateCard = jest.fn();
+const mockGetBoard = jest.fn();
+const mockCreateList = jest.fn();
 
 jest.unstable_mockModule('../src/trello/client.js', () => ({
   TrelloClient: jest.fn().mockImplementation(() => ({
@@ -32,20 +34,20 @@ jest.unstable_mockModule('../src/trello/client.js', () => ({
     getListCards: mockGetListCards,
     getBoardLists: mockGetBoardLists,
     updateCard: mockUpdateCard,
-    getBoard: jest.fn(),
+    getBoard: mockGetBoard,
     createCard: jest.fn(),
     moveCard: jest.fn(),
     deleteCard: jest.fn(),
     search: jest.fn(),
     addCommentToCard: jest.fn(),
-    createList: jest.fn()
+    createList: mockCreateList
   }))
 }));
 
 // Dynamically import after mocks
 const { handleListBoards } = await import('../src/tools/boards.js');
 const { handleGetCard, handleArchiveCard } = await import('../src/tools/cards.js');
-const { handleTrelloGetListCards } = await import('../src/tools/lists.js');
+const { handleTrelloGetListCards, handleTrelloCreateList } = await import('../src/tools/lists.js');
 const { handleTrelloFilterLists } = await import('../src/tools/boards.js');
 
 describe('handleListBoards', () => {
@@ -337,6 +339,76 @@ describe('handleArchiveCard', () => {
 
   it('should return error when value is missing', async () => {
     const result = await handleArchiveCard({ cardId: 'card1' });
+    expect(result.isError).toBe(true);
+  });
+});
+
+describe('handleTrelloCreateList', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.TRELLO_API_KEY = 'test-key';
+    process.env.TRELLO_TOKEN = 'test-token';
+  });
+
+  it('should create a list with a full hex board ID without resolving', async () => {
+    mockCreateList.mockResolvedValueOnce({
+      data: {
+        id: 'list1',
+        name: 'New List',
+        idBoard: '507f1f77bcf86cd799439011',
+        pos: 1,
+        closed: false,
+        subscribed: false
+      },
+      rateLimit: undefined
+    });
+
+    const result = await handleTrelloCreateList({
+      name: 'New List',
+      idBoard: '507f1f77bcf86cd799439011'
+    });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.summary).toContain('New List');
+    expect(parsed.list.name).toBe('New List');
+    // Should NOT call getBoard since the ID is already a full hex
+    expect(mockGetBoard).not.toHaveBeenCalled();
+  });
+
+  it('should resolve a short board ID before creating the list', async () => {
+    mockGetBoard.mockResolvedValueOnce({
+      data: { id: '507f1f77bcf86cd799439011', name: 'Test Board' },
+      rateLimit: undefined
+    });
+    mockCreateList.mockResolvedValueOnce({
+      data: {
+        id: 'list1',
+        name: 'New List',
+        idBoard: '507f1f77bcf86cd799439011',
+        pos: 1,
+        closed: false,
+        subscribed: false
+      },
+      rateLimit: undefined
+    });
+
+    const result = await handleTrelloCreateList({
+      name: 'New List',
+      idBoard: '4p1vK9O4'
+    });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.summary).toContain('New List');
+    // Should call getBoard to resolve the short ID
+    expect(mockGetBoard).toHaveBeenCalledWith('4p1vK9O4');
+    // Should pass the resolved full ID to createList
+    expect(mockCreateList).toHaveBeenCalledWith(
+      expect.objectContaining({ idBoard: '507f1f77bcf86cd799439011' })
+    );
+  });
+
+  it('should return error when name is missing', async () => {
+    const result = await handleTrelloCreateList({ idBoard: 'board1' });
     expect(result.isError).toBe(true);
   });
 });

@@ -16,18 +16,16 @@ import {
 
 const pkg = createRequire(import.meta.url)('../package.json') as { name: string; version: string };
 
-// Read credentials from environment variables
-const TRELLO_API_KEY = process.env.TRELLO_API_KEY;
-const TRELLO_TOKEN = process.env.TRELLO_TOKEN;
-
-// stderr is safe — stdout is reserved for JSON-RPC
-if (!TRELLO_API_KEY || !TRELLO_TOKEN) {
+// stderr is safe — stdout is reserved for JSON-RPC. Boot continues so
+// MCP clients can complete initialize / tools/list (e.g. for registry
+// introspection); credential errors surface per-tool-call instead.
+if (!process.env.TRELLO_API_KEY || !process.env.TRELLO_TOKEN) {
   process.stderr.write(
-    `${pkg.name}: missing required environment variables TRELLO_API_KEY and/or TRELLO_TOKEN.\n` +
-    `Set them in your MCP client config or shell environment. ` +
+    `${pkg.name}: warning — TRELLO_API_KEY and/or TRELLO_TOKEN are not set. ` +
+    `The server will start, but tool calls will fail until credentials are ` +
+    `provided via env vars or per-tool apiKey/token arguments. ` +
     `See https://github.com/agrath/Trello-Desktop-MCP#credentials\n`
   );
-  process.exit(1);
 }
 
 // Import tools with credential injection
@@ -237,16 +235,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   };
 });
 
-// Handle tool calls with automatic credential injection
+// Handle tool calls. Each handler calls extractCredentials() which
+// reads per-call apiKey/token first, then falls back to env vars, and
+// throws a clear validation error if neither is present.
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-
-  // Inject credentials into arguments
-  const argsWithCredentials = {
-    ...args,
-    apiKey: TRELLO_API_KEY,
-    token: TRELLO_TOKEN
-  };
 
   try {
     let result;
@@ -254,193 +247,193 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       // Phase 1: Essential tools
       case 'trello_search':
-        result = await handleTrelloSearch(argsWithCredentials);
+        result = await handleTrelloSearch(args);
         break;
 
       case 'trello_get_user_boards':
-        result = await handleTrelloGetUserBoards(argsWithCredentials);
+        result = await handleTrelloGetUserBoards(args);
         break;
 
       case 'get_board_details':
-        result = await handleGetBoardDetails(argsWithCredentials);
+        result = await handleGetBoardDetails(args);
         break;
 
       case 'get_card':
-        result = await handleGetCard(argsWithCredentials);
+        result = await handleGetCard(args);
         break;
 
       case 'create_card':
-        result = await handleCreateCard(argsWithCredentials);
+        result = await handleCreateCard(args);
         break;
 
       // Phase 2: Core operations
       case 'update_card':
-        result = await handleUpdateCard(argsWithCredentials);
+        result = await handleUpdateCard(args);
         break;
 
       case 'move_card':
-        result = await handleMoveCard(argsWithCredentials);
+        result = await handleMoveCard(args);
         break;
 
       case 'trello_add_comment':
-        result = await handleTrelloAddComment(argsWithCredentials);
+        result = await handleTrelloAddComment(args);
         break;
 
       case 'trello_get_list_cards':
-        result = await handleTrelloGetListCards(argsWithCredentials);
+        result = await handleTrelloGetListCards(args);
         break;
 
       case 'trello_create_list':
-        result = await handleTrelloCreateList(argsWithCredentials);
+        result = await handleTrelloCreateList(args);
         break;
 
       // Original tools (maintained for compatibility)
       case 'list_boards':
-        result = await handleListBoards(argsWithCredentials);
+        result = await handleListBoards(args);
         break;
 
       case 'get_lists':
-        result = await handleGetLists(argsWithCredentials);
+        result = await handleGetLists(args);
         break;
 
       // Member management
       case 'trello_get_member':
-        result = await handleTrelloGetMember(argsWithCredentials);
+        result = await handleTrelloGetMember(args);
         break;
 
       // Phase 3: Advanced features
       case 'trello_get_board_cards':
-        result = await handleTrelloGetBoardCards(argsWithCredentials);
+        result = await handleTrelloGetBoardCards(args);
         break;
 
       case 'trello_get_card_actions':
-        result = await handleTrelloGetCardActions(argsWithCredentials);
+        result = await handleTrelloGetCardActions(args);
         break;
 
       case 'trello_get_card_attachments':
-        result = await handleTrelloGetCardAttachments(argsWithCredentials);
+        result = await handleTrelloGetCardAttachments(args);
         break;
 
       case 'trello_create_card_attachment':
-        result = await handleTrelloCreateCardAttachment(argsWithCredentials);
+        result = await handleTrelloCreateCardAttachment(args);
         break;
 
       case 'trello_get_card_attachment':
-        result = await handleTrelloGetCardAttachment(argsWithCredentials);
+        result = await handleTrelloGetCardAttachment(args);
         break;
 
       case 'trello_delete_card_attachment':
-        result = await handleTrelloDeleteCardAttachment(argsWithCredentials);
+        result = await handleTrelloDeleteCardAttachment(args);
         break;
 
       case 'trello_get_card_checklists':
-        result = await handleTrelloGetCardChecklists(argsWithCredentials);
+        result = await handleTrelloGetCardChecklists(args);
         break;
 
       case 'trello_get_board_members':
-        result = await handleTrelloGetBoardMembers(argsWithCredentials);
+        result = await handleTrelloGetBoardMembers(args);
         break;
 
       case 'trello_get_board_labels':
-        result = await handleTrelloGetBoardLabels(argsWithCredentials);
+        result = await handleTrelloGetBoardLabels(args);
         break;
 
       // Label management
       case 'trello_create_label':
-        result = await handleTrelloCreateLabel(argsWithCredentials);
+        result = await handleTrelloCreateLabel(args);
         break;
 
       case 'trello_update_label':
-        result = await handleTrelloUpdateLabel(argsWithCredentials);
+        result = await handleTrelloUpdateLabel(args);
         break;
 
       case 'trello_add_label_to_card':
-        result = await handleTrelloAddLabelToCard(argsWithCredentials);
+        result = await handleTrelloAddLabelToCard(args);
         break;
 
       case 'trello_remove_label_from_card':
-        result = await handleTrelloRemoveLabelFromCard(argsWithCredentials);
+        result = await handleTrelloRemoveLabelFromCard(args);
         break;
 
       case 'trello_delete_label':
-        result = await handleTrelloDeleteLabel(argsWithCredentials);
+        result = await handleTrelloDeleteLabel(args);
         break;
 
       // Member management on cards
       case 'trello_add_member_to_card':
-        result = await handleTrelloAddMemberToCard(argsWithCredentials);
+        result = await handleTrelloAddMemberToCard(args);
         break;
 
       case 'trello_remove_member_from_card':
-        result = await handleTrelloRemoveMemberFromCard(argsWithCredentials);
+        result = await handleTrelloRemoveMemberFromCard(args);
         break;
 
       // Custom fields
       case 'trello_get_board_custom_fields':
-        result = await handleTrelloGetBoardCustomFields(argsWithCredentials);
+        result = await handleTrelloGetBoardCustomFields(args);
         break;
 
       // Card archiving
       case 'trello_archive_card':
-        result = await handleArchiveCard(argsWithCredentials);
+        result = await handleArchiveCard(args);
         break;
 
       // List filtering
       case 'trello_filter_lists':
-        result = await handleTrelloFilterLists(argsWithCredentials);
+        result = await handleTrelloFilterLists(args);
         break;
 
       // Checklist management
       case 'trello_create_checklist':
-        result = await handleTrelloCreateChecklist(argsWithCredentials);
+        result = await handleTrelloCreateChecklist(args);
         break;
 
       case 'trello_get_checklist':
-        result = await handleTrelloGetChecklist(argsWithCredentials);
+        result = await handleTrelloGetChecklist(args);
         break;
 
       case 'trello_update_checklist':
-        result = await handleTrelloUpdateChecklist(argsWithCredentials);
+        result = await handleTrelloUpdateChecklist(args);
         break;
 
       case 'trello_delete_checklist':
-        result = await handleTrelloDeleteChecklist(argsWithCredentials);
+        result = await handleTrelloDeleteChecklist(args);
         break;
 
       case 'trello_get_checklist_field':
-        result = await handleTrelloGetChecklistField(argsWithCredentials);
+        result = await handleTrelloGetChecklistField(args);
         break;
 
       case 'trello_update_checklist_field':
-        result = await handleTrelloUpdateChecklistField(argsWithCredentials);
+        result = await handleTrelloUpdateChecklistField(args);
         break;
 
       case 'trello_get_board_for_checklist':
-        result = await handleTrelloGetBoardForChecklist(argsWithCredentials);
+        result = await handleTrelloGetBoardForChecklist(args);
         break;
 
       case 'trello_get_card_for_checklist':
-        result = await handleTrelloGetCardForChecklist(argsWithCredentials);
+        result = await handleTrelloGetCardForChecklist(args);
         break;
 
       case 'trello_get_check_items':
-        result = await handleTrelloGetCheckItems(argsWithCredentials);
+        result = await handleTrelloGetCheckItems(args);
         break;
 
       case 'trello_create_check_item':
-        result = await handleTrelloCreateCheckItem(argsWithCredentials);
+        result = await handleTrelloCreateCheckItem(args);
         break;
 
       case 'trello_get_check_item':
-        result = await handleTrelloGetCheckItem(argsWithCredentials);
+        result = await handleTrelloGetCheckItem(args);
         break;
 
       case 'trello_delete_check_item':
-        result = await handleTrelloDeleteCheckItem(argsWithCredentials);
+        result = await handleTrelloDeleteCheckItem(args);
         break;
 
       case 'trello_update_check_item':
-        result = await handleTrelloUpdateCheckItem(argsWithCredentials);
+        result = await handleTrelloUpdateCheckItem(args);
         break;
 
       default:

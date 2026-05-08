@@ -1,5 +1,8 @@
 # Trello MCP Server
 
+[![npm version](https://img.shields.io/npm/v/atlassian-trello-mcp.svg)](https://www.npmjs.com/package/atlassian-trello-mcp)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > 🔀 **Active fork.** This is a maintained fork of [kocakli/Trello-Desktop-MCP](https://github.com/kocakli/Trello-Desktop-MCP) integrating contributions from across the fork ecosystem ([kevinhillinger](https://github.com/kevinhillinger/trello-mcp-server), [zonca](https://github.com/zonca/Trello-Desktop-MCP), [dbz-max](https://github.com/dbz-max/Trello-Desktop-MCP), [maks244](https://github.com/maks244/trello-mcp-readonly), [jantman](https://github.com/jantman/Trello-Desktop-MCP), [ThatIanMcShane](https://github.com/ThatIanMcShane/Trello-Desktop-MCP), [josh-argyle](https://github.com/josh-argyle/Trello-Desktop-MCP)). PRs welcome — see [Credits](#credits) for what each contributor brought in. Published on npm as [`atlassian-trello-mcp`](https://www.npmjs.com/package/atlassian-trello-mcp).
 
 A Model Context Protocol (MCP) server for Trello that works with any MCP-compatible client -- Claude Desktop, Claude Code, Gemini CLI, and more.

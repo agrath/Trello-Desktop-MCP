@@ -3,6 +3,7 @@
 // Initialize logging first - this sets up file transport and console overrides
 import './utils/logger.js';
 
+import { createRequire } from 'module';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -13,12 +14,19 @@ import {
   ListPromptsRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
 
+const pkg = createRequire(import.meta.url)('../package.json') as { name: string; version: string };
+
 // Read credentials from environment variables
 const TRELLO_API_KEY = process.env.TRELLO_API_KEY;
 const TRELLO_TOKEN = process.env.TRELLO_TOKEN;
 
-// No console output in MCP mode - only JSON-RPC on stdout!
+// stderr is safe — stdout is reserved for JSON-RPC
 if (!TRELLO_API_KEY || !TRELLO_TOKEN) {
+  process.stderr.write(
+    `${pkg.name}: missing required environment variables TRELLO_API_KEY and/or TRELLO_TOKEN.\n` +
+    `Set them in your MCP client config or shell environment. ` +
+    `See https://github.com/agrath/Trello-Desktop-MCP#credentials\n`
+  );
   process.exit(1);
 }
 
@@ -137,8 +145,8 @@ import {
 // Create server instance
 const server = new Server(
   {
-    name: 'trello-mcp',
-    version: '1.0.0',
+    name: pkg.name,
+    version: pkg.version,
   },
   {
     capabilities: {
@@ -159,8 +167,8 @@ server.setRequestHandler(InitializeRequestSchema, async () => {
       prompts: {}
     },
     serverInfo: {
-      name: 'trello-mcp',
-      version: '1.0.0'
+      name: pkg.name,
+      version: pkg.version
     }
   };
 });

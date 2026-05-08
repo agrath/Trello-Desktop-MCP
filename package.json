@@ -1,6 +1,6 @@
 {
   "name": "atlassian-trello-mcp",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Trello integration for any MCP-compatible client via Model Context Protocol (MCP)",
   "main": "dist/index.js",
   "bin": {

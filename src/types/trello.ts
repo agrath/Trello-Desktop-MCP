@@ -134,6 +134,7 @@ export interface CreateCardRequest {
   idList: string;
   pos?: number | string | undefined;
   due?: string | undefined;
+  start?: string | undefined;
   idMembers?: string[] | undefined;
   idLabels?: string[] | undefined;
 }
@@ -144,6 +145,7 @@ export interface UpdateCardRequest {
   closed?: boolean | undefined;
   due?: string | null | undefined;
   dueComplete?: boolean | undefined;
+  start?: string | null | undefined;
   idList?: string | undefined;
   pos?: number | string | undefined;
   idMembers?: string[] | undefined;

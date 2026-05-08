@@ -72,6 +72,7 @@ export const createCardSchema = z.object({
   idList: trelloIdSchema,
   pos: z.union([z.number().min(0), z.enum(['top', 'bottom'])]).optional(),
   due: z.string().datetime().optional(),
+  start: z.string().datetime().optional(),
   idMembers: z.array(trelloIdSchema).optional(),
   idLabels: z.array(trelloIdSchema).optional()
 });
@@ -83,6 +84,7 @@ export const updateCardSchema = z.object({
   closed: z.boolean().optional(),
   due: z.string().datetime().nullable().optional(),
   dueComplete: z.boolean().optional(),
+  start: z.string().datetime().nullable().optional(),
   idList: trelloIdOptionalSchema,
   pos: z.union([z.number().min(0), z.enum(['top', 'bottom'])]).optional(),
   idMembers: z.array(trelloIdSchema).optional(),

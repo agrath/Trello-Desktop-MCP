@@ -49,6 +49,11 @@ export const createCardTool: Tool = {
         format: 'date-time',
         description: 'Optional due date for the card (ISO 8601 format, e.g., "2024-12-31T23:59:59Z")'
       },
+      start: {
+        type: 'string',
+        format: 'date-time',
+        description: 'Optional start date for the card (ISO 8601 format, e.g., "2024-12-01T09:00:00Z")'
+      },
       idMembers: {
         type: 'array',
         items: {
@@ -169,6 +174,11 @@ export const updateCardTool: Tool = {
       dueComplete: {
         type: 'boolean',
         description: 'Mark the due date as complete (true) or incomplete (false)'
+      },
+      start: {
+        type: ['string', 'null'],
+        format: 'date-time',
+        description: 'Set start date (ISO 8601 format) or null to remove start date'
       },
       idList: {
         type: 'string',

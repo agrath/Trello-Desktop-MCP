@@ -10,6 +10,12 @@ import {
   trelloIdSchema,
   extractCredentials
 } from '../utils/validation.js';
+import {
+  IMAGE_MIME_TYPES,
+  MAX_IMAGE_BYTES,
+  isAllowedAttachmentUrl,
+  imageDownloadEnabled
+} from '../utils/imageDownload.js';
 
 export const createCardTool: Tool = {
   name: 'create_card',
@@ -372,9 +378,48 @@ export async function handleGetCard(args: unknown) {
     const { cardId, includeDetails } = validateGetCard(params);
 
     const client = new TrelloClient(credentials);
-    const response = await client.getCard(cardId, includeDetails);
+    const downloadImages = imageDownloadEnabled();
+
+    const [response, attachmentsResponse] = await Promise.all([
+      client.getCard(cardId, includeDetails),
+      downloadImages ? client.getCardAttachments(cardId) : Promise.resolve(null)
+    ]);
     const card = response.data;
-    
+    const attachments = attachmentsResponse?.data ?? [];
+
+    type ImageContentBlock = { type: 'image'; data: string; mimeType: string };
+    const imageBlocks: ImageContentBlock[] = [];
+    const imageStatus: string[] = [];
+
+    if (downloadImages && attachments.length > 0) {
+      const eligible = attachments.filter(a =>
+        a.mimeType &&
+        IMAGE_MIME_TYPES.has(a.mimeType) &&
+        a.bytes <= MAX_IMAGE_BYTES &&
+        isAllowedAttachmentUrl(a.url)
+      );
+      const skipped = attachments.filter(a =>
+        a.mimeType && IMAGE_MIME_TYPES.has(a.mimeType) && !eligible.includes(a)
+      );
+      for (const a of skipped) {
+        const reason = a.bytes > MAX_IMAGE_BYTES
+          ? `>${MAX_IMAGE_BYTES} bytes`
+          : 'url not on allowlist';
+        imageStatus.push(`skipped ${a.name} (${reason})`);
+      }
+      const downloads = await Promise.all(eligible.map(a => client.downloadAttachment(a.url)));
+      for (let i = 0; i < eligible.length; i++) {
+        const a = eligible[i];
+        const dl = downloads[i];
+        if (dl) {
+          imageBlocks.push({ type: 'image', data: dl.data, mimeType: dl.mimeType });
+          imageStatus.push(`downloaded ${a.name} (${dl.mimeType}, ${a.bytes} bytes)`);
+        } else {
+          imageStatus.push(`failed ${a.name}`);
+        }
+      }
+    }
+
     const result = {
       summary: `Card: ${card.name}`,
       card: {
@@ -390,6 +435,17 @@ export async function handleGetCard(args: unknown) {
         start: card.start,
         closed: card.closed,
         lastActivity: card.dateLastActivity,
+        ...(downloadImages && {
+          attachments: attachments.map(a => ({
+            id: a.id,
+            name: a.name,
+            url: a.url,
+            mimeType: a.mimeType,
+            bytes: a.bytes,
+            isImage: !!a.mimeType && IMAGE_MIME_TYPES.has(a.mimeType)
+          })),
+          imageDownloads: imageStatus
+        }),
         ...(includeDetails && {
           labels: card.labels?.map(label => ({
             id: label.id,
@@ -424,13 +480,11 @@ export async function handleGetCard(args: unknown) {
       },
       rateLimit: response.rateLimit
     };
-    
+
     return {
       content: [
-        {
-          type: 'text' as const,
-          text: JSON.stringify(result, null, 2)
-        }
+        { type: 'text' as const, text: JSON.stringify(result, null, 2) },
+        ...imageBlocks
       ]
     };
   } catch (error) {

@@ -2,6 +2,7 @@ import { readFile } from 'fs/promises';
 import { basename } from 'path';
 import { logger } from '../utils/logger.js';
 import { insights } from '../utils/appInsights.js';
+import { isAllowedAttachmentUrl } from '../utils/imageDownload.js';
 import type {
   TrelloCredentials,
   TrelloBoard,
@@ -669,6 +670,35 @@ export class TrelloClient {
       { method: 'DELETE' },
       `Delete attachment ${attachmentId} from card ${cardId}`
     );
+  }
+
+  async downloadAttachment(url: string): Promise<{ data: string; mimeType: string } | null> {
+    if (!isAllowedAttachmentUrl(url)) {
+      logger.warn('Skipping attachment download: URL not on allowlist', { url });
+      return null;
+    }
+    try {
+      const response = await this.fetchWithTimeout(url, {
+        timeout: 30000,
+        headers: {
+          Authorization: `OAuth oauth_consumer_key="${this.credentials.apiKey}", oauth_token="${this.credentials.token}"`
+        }
+      });
+      if (!response.ok) {
+        logger.warn('Attachment download failed', { url, status: response.status });
+        return null;
+      }
+      const mimeType = response.headers.get('content-type') || 'application/octet-stream';
+      const buffer = await response.arrayBuffer();
+      const data = Buffer.from(buffer).toString('base64');
+      return { data, mimeType };
+    } catch (error) {
+      logger.error('Attachment download error', {
+        url,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return null;
+    }
   }
 
   async getCardChecklists(cardId: string, options?: {

@@ -27,6 +27,9 @@ const mockUpdateCard = jest.fn();
 const mockGetBoard = jest.fn();
 const mockCreateList = jest.fn();
 
+const mockGetCardAttachments = jest.fn();
+const mockDownloadAttachment = jest.fn();
+
 jest.unstable_mockModule('../src/trello/client.js', () => ({
   TrelloClient: jest.fn().mockImplementation(() => ({
     getMyBoards: mockGetMyBoards,
@@ -40,7 +43,9 @@ jest.unstable_mockModule('../src/trello/client.js', () => ({
     deleteCard: jest.fn(),
     search: jest.fn(),
     addCommentToCard: jest.fn(),
-    createList: mockCreateList
+    createList: mockCreateList,
+    getCardAttachments: mockGetCardAttachments,
+    downloadAttachment: mockDownloadAttachment
   }))
 }));
 
@@ -151,6 +156,116 @@ describe('handleGetCard', () => {
     const result = await handleGetCard({ cardId: 'card1' });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain('Network failure');
+  });
+
+  describe('image download behavior', () => {
+    const cardData = {
+      id: 'card1',
+      name: 'Test Card',
+      desc: '',
+      shortUrl: 'https://trello.com/c/card1',
+      idList: 'list1',
+      idBoard: 'board1',
+      pos: 1,
+      due: null,
+      dueComplete: false,
+      closed: false,
+      dateLastActivity: '2025-01-01T00:00:00Z',
+      labels: [],
+      members: [],
+      checklists: []
+    };
+
+    afterEach(() => {
+      delete process.env.TRELLO_DOWNLOAD_IMAGES;
+    });
+
+    it('should skip the attachments call when TRELLO_DOWNLOAD_IMAGES=false', async () => {
+      process.env.TRELLO_DOWNLOAD_IMAGES = 'false';
+      mockGetCard.mockResolvedValueOnce({ data: cardData, rateLimit: undefined });
+
+      const result = await handleGetCard({ cardId: 'card1' });
+
+      expect(mockGetCardAttachments).not.toHaveBeenCalled();
+      expect(mockDownloadAttachment).not.toHaveBeenCalled();
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.card.attachments).toBeUndefined();
+      expect(parsed.card.imageDownloads).toBeUndefined();
+      expect(result.content).toHaveLength(1);
+    });
+
+    it('should download eligible image attachments and append image content blocks', async () => {
+      mockGetCard.mockResolvedValueOnce({ data: cardData, rateLimit: undefined });
+      mockGetCardAttachments.mockResolvedValueOnce({
+        data: [
+          { id: 'a1', name: 'photo.png', url: 'https://trello-attachments.s3.amazonaws.com/x/photo.png', mimeType: 'image/png', bytes: 1024 }
+        ],
+        rateLimit: undefined
+      });
+      mockDownloadAttachment.mockResolvedValueOnce({ data: 'aGVsbG8=', mimeType: 'image/png' });
+
+      const result = await handleGetCard({ cardId: 'card1' });
+
+      expect(mockDownloadAttachment).toHaveBeenCalledWith('https://trello-attachments.s3.amazonaws.com/x/photo.png');
+      expect(result.content).toHaveLength(2);
+      expect(result.content[1]).toEqual({ type: 'image', data: 'aGVsbG8=', mimeType: 'image/png' });
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.card.attachments[0].isImage).toBe(true);
+      expect(parsed.card.imageDownloads[0]).toContain('downloaded');
+    });
+
+    it('should not download images from disallowed hosts', async () => {
+      mockGetCard.mockResolvedValueOnce({ data: cardData, rateLimit: undefined });
+      mockGetCardAttachments.mockResolvedValueOnce({
+        data: [
+          { id: 'a1', name: 'evil.png', url: 'http://169.254.169.254/latest/meta-data/', mimeType: 'image/png', bytes: 1024 }
+        ],
+        rateLimit: undefined
+      });
+
+      const result = await handleGetCard({ cardId: 'card1' });
+
+      expect(mockDownloadAttachment).not.toHaveBeenCalled();
+      expect(result.content).toHaveLength(1);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.card.imageDownloads[0]).toContain('skipped');
+      expect(parsed.card.imageDownloads[0]).toContain('allowlist');
+    });
+
+    it('should skip oversized images', async () => {
+      mockGetCard.mockResolvedValueOnce({ data: cardData, rateLimit: undefined });
+      mockGetCardAttachments.mockResolvedValueOnce({
+        data: [
+          { id: 'a1', name: 'huge.png', url: 'https://trello-attachments.s3.amazonaws.com/x/huge.png', mimeType: 'image/png', bytes: 10 * 1024 * 1024 }
+        ],
+        rateLimit: undefined
+      });
+
+      const result = await handleGetCard({ cardId: 'card1' });
+
+      expect(mockDownloadAttachment).not.toHaveBeenCalled();
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.card.imageDownloads[0]).toContain('skipped');
+      expect(parsed.card.imageDownloads[0]).toContain('bytes');
+    });
+
+    it('should ignore non-image attachments', async () => {
+      mockGetCard.mockResolvedValueOnce({ data: cardData, rateLimit: undefined });
+      mockGetCardAttachments.mockResolvedValueOnce({
+        data: [
+          { id: 'a1', name: 'doc.pdf', url: 'https://trello-attachments.s3.amazonaws.com/x/doc.pdf', mimeType: 'application/pdf', bytes: 1024 }
+        ],
+        rateLimit: undefined
+      });
+
+      const result = await handleGetCard({ cardId: 'card1' });
+
+      expect(mockDownloadAttachment).not.toHaveBeenCalled();
+      expect(result.content).toHaveLength(1);
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.card.attachments[0].isImage).toBe(false);
+      expect(parsed.card.imageDownloads).toEqual([]);
+    });
   });
 });
 

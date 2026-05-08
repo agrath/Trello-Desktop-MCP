@@ -94,6 +94,12 @@ Credentials can be provided two ways:
 1. **Environment variables** (recommended): Set `TRELLO_API_KEY` and `TRELLO_TOKEN`
 2. **Per-request**: Pass `apiKey` and `token` as tool parameters (overrides env vars)
 
+## Configuration
+
+| Env var | Default | Effect |
+|---|---|---|
+| `TRELLO_DOWNLOAD_IMAGES` | `true` | When enabled, `get_card` downloads image attachments and returns them as inline MCP image content blocks. Downloads are restricted to Trello-hosted URLs (`*.trello.com`, `trello-attachments.s3.amazonaws.com`) and capped at 5 MB per image. Set to `false` (or `0`/`no`/`off`) to disable entirely. |
+
 ## Available Tools (46)
 
 ### Boards & Lists
@@ -276,6 +282,7 @@ This project is a fork of [kocakli/Trello-Desktop-MCP](https://github.com/kocakl
 - **[maks244](https://github.com/maks244/trello-mcp-readonly)** -- Read-only mode concept, list filtering by name, credential stripping from telemetry logs
 - **[jantman](https://github.com/jantman/Trello-Desktop-MCP)** -- Fix for numeric `pos` values rejected when sent as strings by MCP clients
 - **[ThatIanMcShane](https://github.com/ThatIanMcShane/Trello-Desktop-MCP)** -- Bumped `@modelcontextprotocol/sdk` 1.0.4 → 1.29.0 to fix connection timeouts with current Claude Code releases
+- **[josh-argyle](https://github.com/josh-argyle/Trello-Desktop-MCP)** -- Auto-download image attachments in `get_card` responses as inline MCP image content blocks (with allowlist + size cap added during port)
 
 ## License
 

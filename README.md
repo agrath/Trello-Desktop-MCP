@@ -1,5 +1,7 @@
 # Trello MCP Server
 
+> 🔀 **Active fork.** This is a maintained fork of [kocakli/Trello-Desktop-MCP](https://github.com/kocakli/Trello-Desktop-MCP) integrating contributions from across the fork ecosystem ([kevinhillinger](https://github.com/kevinhillinger/trello-mcp-server), [zonca](https://github.com/zonca/Trello-Desktop-MCP), [dbz-max](https://github.com/dbz-max/Trello-Desktop-MCP), [maks244](https://github.com/maks244/trello-mcp-readonly), [jantman](https://github.com/jantman/Trello-Desktop-MCP), [ThatIanMcShane](https://github.com/ThatIanMcShane/Trello-Desktop-MCP), [josh-argyle](https://github.com/josh-argyle/Trello-Desktop-MCP)). PRs welcome — see [Credits](#credits) for what each contributor brought in. Published on npm as [`atlassian-trello-mcp`](https://www.npmjs.com/package/atlassian-trello-mcp).
+
 A Model Context Protocol (MCP) server for Trello that works with any MCP-compatible client -- Claude Desktop, Claude Code, Gemini CLI, and more.
 
 Provides 46 tools covering boards, cards, lists, labels, checklists, attachments, members, custom fields, and search.
@@ -13,6 +15,14 @@ Provides 46 tools covering boards, cards, lists, labels, checklists, attachments
 - Click "Generate a Token" for read/write access
 
 ### 2. Install
+
+The easiest path is `npx` — no clone, no build, just run:
+
+```bash
+npx atlassian-trello-mcp
+```
+
+Or install from source:
 
 ```bash
 git clone https://github.com/agrath/Trello-Desktop-MCP.git
@@ -35,8 +45,8 @@ Edit your config file:
 {
   "mcpServers": {
     "trello": {
-      "command": "node",
-      "args": ["/absolute/path/to/Trello-Desktop-MCP/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "atlassian-trello-mcp"],
       "env": {
         "TRELLO_API_KEY": "your-api-key",
         "TRELLO_TOKEN": "your-token"
@@ -51,7 +61,7 @@ Edit your config file:
 <summary><strong>Claude Code</strong></summary>
 
 ```bash
-claude mcp add trello -- node /absolute/path/to/Trello-Desktop-MCP/dist/index.js
+claude mcp add trello -- npx -y atlassian-trello-mcp
 ```
 
 Set environment variables `TRELLO_API_KEY` and `TRELLO_TOKEN`, or pass credentials per-request.
@@ -65,8 +75,8 @@ Edit `~/.gemini/settings.json`:
 {
   "mcpServers": {
     "trello": {
-      "command": "node",
-      "args": ["/absolute/path/to/Trello-Desktop-MCP/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "atlassian-trello-mcp"],
       "env": {
         "TRELLO_API_KEY": "your-api-key",
         "TRELLO_TOKEN": "your-token"
@@ -78,11 +88,13 @@ Edit `~/.gemini/settings.json`:
 </details>
 
 <details>
-<summary><strong>Generic MCP client</strong></summary>
+<summary><strong>Generic MCP client / source install</strong></summary>
 
 The server uses stdio transport. Run with environment variables set:
 
 ```bash
+TRELLO_API_KEY=your-key TRELLO_TOKEN=your-token npx atlassian-trello-mcp
+# or, from a source clone:
 TRELLO_API_KEY=your-key TRELLO_TOKEN=your-token node dist/index.js
 ```
 </details>
@@ -93,12 +105,6 @@ Credentials can be provided two ways:
 
 1. **Environment variables** (recommended): Set `TRELLO_API_KEY` and `TRELLO_TOKEN`
 2. **Per-request**: Pass `apiKey` and `token` as tool parameters (overrides env vars)
-
-## Configuration
-
-| Env var | Default | Effect |
-|---|---|---|
-| `TRELLO_DOWNLOAD_IMAGES` | `true` | When enabled, `get_card` downloads image attachments and returns them as inline MCP image content blocks. Downloads are restricted to Trello-hosted URLs (`*.trello.com`, `trello-attachments.s3.amazonaws.com`) and capped at 5 MB per image. Set to `false` (or `0`/`no`/`off`) to disable entirely. |
 
 ## Available Tools (46)
 
@@ -204,6 +210,12 @@ Set `TRELLO_READ_ONLY=true` to disable all write operations. Only read/query too
 Several tools support a `compact` parameter (default: `true`) that returns minimal fields to reduce response size. Set `compact: false` for full details including descriptions, labels, members, and custom fields.
 
 Tools with compact mode: `get_board_details`, `trello_get_board_cards`, `trello_get_list_cards`, `trello_search`.
+
+### Image attachment download
+
+When `get_card` is called and the card has image attachments, the server downloads them and returns them as inline MCP image content blocks alongside the JSON — letting the client see card images directly. Downloads are restricted to Trello-hosted URLs (`*.trello.com`, `trello-attachments.s3.amazonaws.com`) and capped at 5 MB per image to mitigate SSRF and payload-bloat risks.
+
+Set `TRELLO_DOWNLOAD_IMAGES=false` (or `0`/`no`/`off`) to disable entirely — the server will skip the extra `getCardAttachments` call and return text only. Default is enabled.
 
 ### Logging
 

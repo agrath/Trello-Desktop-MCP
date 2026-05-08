@@ -1,8 +1,11 @@
 {
-  "name": "trello-mcp",
-  "version": "1.1.0",
+  "name": "atlassian-trello-mcp",
+  "version": "1.2.0",
   "description": "Trello integration for any MCP-compatible client via Model Context Protocol (MCP)",
   "main": "dist/index.js",
+  "bin": {
+    "atlassian-trello-mcp": "dist/index.js"
+  },
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -30,12 +33,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/trello-desktop-mcp.git"
+    "url": "https://github.com/agrath/Trello-Desktop-MCP.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/trello-desktop-mcp/issues"
+    "url": "https://github.com/agrath/Trello-Desktop-MCP/issues"
   },
-  "homepage": "https://github.com/yourusername/trello-desktop-mcp#readme",
+  "homepage": "https://github.com/agrath/Trello-Desktop-MCP#readme",
   "engines": {
     "node": ">=18.0.0"
   },

@@ -88,6 +88,7 @@ export async function handleCreateCard(args: unknown) {
         boardId: card.idBoard,
         position: card.pos,
         due: card.due,
+        start: card.start,
         closed: card.closed,
         labels: card.labels?.map(label => ({
           id: label.id,
@@ -102,7 +103,7 @@ export async function handleCreateCard(args: unknown) {
       },
       rateLimit: response.rateLimit
     };
-    
+
     return {
       content: [
         {
@@ -112,12 +113,12 @@ export async function handleCreateCard(args: unknown) {
       ]
     };
   } catch (error) {
-    const errorMessage = error instanceof z.ZodError 
+    const errorMessage = error instanceof z.ZodError
       ? formatValidationError(error)
-      : error instanceof Error 
-        ? error.message 
+      : error instanceof Error
+        ? error.message
         : 'Unknown error occurred';
-        
+
     return {
       content: [
         {
@@ -206,6 +207,7 @@ export async function handleUpdateCard(args: unknown) {
         position: card.pos,
         due: card.due,
         dueComplete: card.dueComplete,
+        start: card.start,
         closed: card.closed,
         labels: card.labels?.map(label => ({
           id: label.id,
@@ -375,6 +377,7 @@ export async function handleGetCard(args: unknown) {
         position: card.pos,
         due: card.due,
         dueComplete: card.dueComplete,
+        start: card.start,
         closed: card.closed,
         lastActivity: card.dateLastActivity,
         ...(includeDetails && {

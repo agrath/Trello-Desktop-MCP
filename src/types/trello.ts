@@ -48,6 +48,7 @@ export interface TrelloCard {
   dateLastActivity: string;
   due: string | null;
   dueComplete: boolean;
+  start: string | null;
   labels: TrelloLabel[];
   members: TrelloMember[];
   checklists: TrelloChecklist[];

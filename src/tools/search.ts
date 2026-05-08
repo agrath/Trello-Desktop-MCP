@@ -172,6 +172,7 @@ export async function handleTrelloSearch(args: unknown) {
         listId: card.idList,
         boardId: card.idBoard,
         due: card.due,
+        start: card.start,
         closed: card.closed,
         labels: card.labels?.map((label: any) => ({
           id: label.id,

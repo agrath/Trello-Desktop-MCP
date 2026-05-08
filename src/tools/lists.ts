@@ -110,6 +110,7 @@ export async function handleTrelloGetListCards(args: unknown) {
         position: card.pos,
         due: card.due,
         dueComplete: card.dueComplete,
+        start: card.start,
         closed: card.closed,
         lastActivity: card.dateLastActivity,
         labels: card.labels?.map(label => ({

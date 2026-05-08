@@ -174,6 +174,7 @@ export async function handleGetBoardDetails(args: unknown) {
                 listId: card.idList,
                 position: card.pos,
                 due: card.due,
+                start: card.start,
                 closed: card.closed,
                 labels: card.labels?.map(label => ({
                   id: label.id,

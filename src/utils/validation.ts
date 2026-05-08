@@ -70,7 +70,7 @@ export const createCardSchema = z.object({
   name: z.string().min(1, 'Card name is required').max(16384, 'Card name too long'),
   desc: z.string().max(16384, 'Description too long').optional(),
   idList: trelloIdSchema,
-  pos: z.union([z.number().min(0), z.enum(['top', 'bottom'])]).optional(),
+  pos: z.union([z.number().min(0), z.string().regex(/^\d+(\.\d+)?$/).transform(Number), z.enum(['top', 'bottom'])]).optional(),
   due: z.string().datetime().optional(),
   start: z.string().datetime().optional(),
   idMembers: z.array(trelloIdSchema).optional(),
@@ -86,7 +86,7 @@ export const updateCardSchema = z.object({
   dueComplete: z.boolean().optional(),
   start: z.string().datetime().nullable().optional(),
   idList: trelloIdOptionalSchema,
-  pos: z.union([z.number().min(0), z.enum(['top', 'bottom'])]).optional(),
+  pos: z.union([z.number().min(0), z.string().regex(/^\d+(\.\d+)?$/).transform(Number), z.enum(['top', 'bottom'])]).optional(),
   idMembers: z.array(trelloIdSchema).optional(),
   idLabels: z.array(trelloIdSchema).optional()
 });
@@ -94,7 +94,7 @@ export const updateCardSchema = z.object({
 export const moveCardSchema = z.object({
   cardId: trelloIdSchema,
   idList: trelloIdSchema,
-  pos: z.union([z.number().min(0), z.enum(['top', 'bottom'])]).optional()
+  pos: z.union([z.number().min(0), z.string().regex(/^\d+(\.\d+)?$/).transform(Number), z.enum(['top', 'bottom'])]).optional()
 });
 
 export const getCardSchema = z.object({

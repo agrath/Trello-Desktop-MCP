@@ -274,6 +274,7 @@ This project is a fork of [kocakli/Trello-Desktop-MCP](https://github.com/kocakl
 - **[zonca](https://github.com/zonca/Trello-Desktop-MCP)** -- Centralized credential handling with env var fallback, label management tools, comprehensive unit tests, improved TypeScript types replacing `any`
 - **[dbz-max](https://github.com/dbz-max/Trello-Desktop-MCP)** -- Custom fields support (board custom fields + card custom field items)
 - **[maks244](https://github.com/maks244/trello-mcp-readonly)** -- Read-only mode concept, list filtering by name, credential stripping from telemetry logs
+- **[jantman](https://github.com/jantman/Trello-Desktop-MCP)** -- Fix for numeric `pos` values rejected when sent as strings by MCP clients
 
 ## License
 

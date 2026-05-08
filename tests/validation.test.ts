@@ -184,6 +184,37 @@ describe('createCardSchema', () => {
     });
     expect(result.pos).toBe(42);
   });
+
+  it('should coerce stringified numeric pos to a number', () => {
+    const result = createCardSchema.parse({
+      name: 'Test Card',
+      idList: 'abc123',
+      pos: '11204'
+    });
+    expect(result.pos).toBe(11204);
+  });
+
+  it('should coerce stringified decimal pos to a number', () => {
+    const result = createCardSchema.parse({
+      name: 'Test Card',
+      idList: 'abc123',
+      pos: '65535.5'
+    });
+    expect(result.pos).toBe(65535.5);
+  });
+
+  it('should still accept "top" and "bottom" string literals for pos', () => {
+    expect(createCardSchema.parse({ name: 'X', idList: 'abc', pos: 'top' }).pos).toBe('top');
+    expect(createCardSchema.parse({ name: 'X', idList: 'abc', pos: 'bottom' }).pos).toBe('bottom');
+  });
+
+  it('should reject non-numeric, non-enum string pos', () => {
+    expect(() => createCardSchema.parse({
+      name: 'Test Card',
+      idList: 'abc123',
+      pos: 'middle'
+    })).toThrow();
+  });
 });
 
 describe('updateCardSchema', () => {
@@ -209,6 +240,11 @@ describe('updateCardSchema', () => {
 
   it('should reject without cardId', () => {
     expect(() => updateCardSchema.parse({})).toThrow();
+  });
+
+  it('should coerce stringified numeric pos to a number', () => {
+    const result = updateCardSchema.parse({ cardId: 'abc123', pos: '32768' });
+    expect(result.pos).toBe(32768);
   });
 });
 
@@ -250,6 +286,11 @@ describe('moveCardSchema', () => {
 
   it('should reject without idList', () => {
     expect(() => moveCardSchema.parse({ cardId: 'card1' })).toThrow();
+  });
+
+  it('should coerce stringified numeric pos to a number', () => {
+    const result = moveCardSchema.parse({ cardId: 'card1', idList: 'list1', pos: '8192' });
+    expect(result.pos).toBe(8192);
   });
 });
 

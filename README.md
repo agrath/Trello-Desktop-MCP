@@ -13,9 +13,22 @@ Provides 46 tools covering boards, cards, lists, labels, checklists, attachments
 
 ### 1. Get Trello API credentials
 
-- Visit https://trello.com/app-key
-- Copy your API Key
-- Click "Generate a Token" for read/write access
+Trello no longer hands out API keys directly — each user must create their own Power-Up, then mint a token against that Power-Up's key.
+
+1. Visit https://trello.com/power-ups/admin and click **New**.
+2. Fill out the **New Power-Up or Integration** form:
+   - **New Power-Up or Integration name**: `Claude MCP`. If you have multiple team members, each developer must create their own Power-Up so the API key is tied to their user — name it with your own name too, e.g. `Trello MCP Steve`.
+   - **Workspace**: the workspace you want to interact with.
+   - **Iframe connector URL**: `https://localhost` (required field, not actually used by this MCP server).
+   - **Email**: your email.
+   - **Support contact** and **Author**: can be company-level or personal.
+3. Once the Power-Up is created, click **API key** in the sidebar, then **Generate a new API key**, then **Generate API key** in the confirmation modal. Trello displays both an **API key** and a **Secret** — save them somewhere safe.
+4. In a browser, visit:
+   ```
+   https://trello.com/1/authorize?expiration=never&scope=read,write,account&response_type=token&name={NAME}&key={APIKEY}
+   ```
+   Replace `{NAME}` with the Power-Up name you chose and `{APIKEY}` with the key from the previous step. This is an auth prompt — confirm access and click **Allow**. Trello returns an **API token**; copy it.
+5. Put the API key and token into your MCP client config (e.g. `.claude.json`) — see the next section.
 
 ### 2. Install
 
